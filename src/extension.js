@@ -1,6 +1,10 @@
+const crypto = require("crypto");
 const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
+
+const OPEN_SLIDE_DELIMITER = /^<!--\s*slide\s*-->\s*$/i;
+const CLOSE_SLIDE_DELIMITER = /^<!--\s*\/slide\s*-->\s*$/i;
 
 /**
  * Extracts Mermaid diagram code blocks from raw markdown text.
@@ -42,32 +46,38 @@ function extractMermaidBlocks(rawText) {
 /**
  * Detects whether a markdown document contains slide delimiters.
  *
- * A slide delimiter is a line containing only <!-- slide --> (case-insensitive,
- * optional surrounding whitespace). This is the opt-in signal for slide mode;
- * files without it use the classic mermaid-only path.
+ * A slide document is detected by the presence of an opening delimiter line
+ * containing only <!-- slide --> (case-insensitive, optional surrounding
+ * whitespace). Files without it use the classic mermaid-only path.
  *
  * @param {string} rawText - Raw markdown file content
  * @returns {boolean} True if at least one slide delimiter is present
  */
 function hasSlideDelimiter(rawText) {
-	return /^<!--\s*slide\s*-->\s*$/im.test(rawText);
+	if (!rawText) {
+		return false;
+	}
+
+	return rawText.split(/\r?\n/).some(function (line) {
+		return OPEN_SLIDE_DELIMITER.test(line);
+	});
 }
 
 /**
- * Splits a markdown document into logical slides using paired fence semantics.
+ * Splits a markdown document into logical slides using explicit open/close tags.
  *
- * Delimiters (<!-- slide -->, case-insensitive) work like code fences:
- * the 1st opens a slide, the 2nd closes it, the 3rd opens the next, etc.
- * Only content inside an open/close pair becomes a slide. Content outside
- * any pair (preamble, gaps between pairs, trailing text after a close) is
- * ignored. This lets authors keep notes, titles, or documentation in the
- * same file without it appearing in the slideshow.
+ * Opening tags use <!-- slide --> and closing tags use <!-- /slide -->
+ * (case-insensitive). Only content inside an open/close pair becomes a slide.
+ * Content outside any pair (preamble, gaps between pairs, trailing text after
+ * a close) is ignored. This lets authors keep notes, titles, or documentation
+ * in the same file without it appearing in the slideshow.
  *
- * If the file ends while a slide is still open (odd number of delimiters),
- * the open slide is implicitly closed at EOF.
+ * If the file ends while a slide is still open, the open slide is implicitly
+ * closed at EOF.
  *
  * Delimiters inside fenced code blocks (``` or ::: mermaid) are ignored.
- * Empty slides (open immediately followed by close) are skipped.
+ * Empty slides (open immediately followed by close) are skipped. Stray closing
+ * tags and nested opening tags are ignored outside their expected positions.
  *
  * A leading YAML front matter block (line 0 = "---", closed by "---" or "...")
  * is detected and excluded from slide content.
@@ -80,7 +90,6 @@ function splitSlides(rawText) {
 		return [];
 	}
 
-	const DELIMITER = /^<!--\s*slide\s*-->\s*$/i;
 	const lines = rawText.split(/\r?\n/);
 	let startLine = 0;
 
@@ -129,21 +138,29 @@ function splitSlides(rawText) {
 		}
 
 		// Slide delimiters are only recognized outside of fenced blocks
-		if (!insideFence && !insideColonMermaid && DELIMITER.test(line)) {
-			if (insideSlide) {
-				// Closing delimiter — save the accumulated slide
+		if (!insideFence && !insideColonMermaid) {
+			if (!insideSlide && OPEN_SLIDE_DELIMITER.test(line)) {
+				current = [];
+				insideSlide = true;
+				continue;
+			}
+
+			if (insideSlide && CLOSE_SLIDE_DELIMITER.test(line)) {
 				const slideText = current.join("\n").trim();
 				if (slideText) {
 					slides.push(slideText);
 				}
 				current = [];
 				insideSlide = false;
-			} else {
-				// Opening delimiter — start accumulating a new slide
-				current = [];
-				insideSlide = true;
+				continue;
 			}
-		} else if (insideSlide) {
+
+			if (CLOSE_SLIDE_DELIMITER.test(line) || OPEN_SLIDE_DELIMITER.test(line)) {
+				continue;
+			}
+		}
+
+		if (insideSlide) {
 			current.push(line);
 		}
 		// Lines outside an open slide pair are silently discarded
@@ -163,8 +180,9 @@ function splitSlides(rawText) {
 /**
  * Returns slides for a document, auto-detecting the appropriate mode.
  *
- * Slide mode (<!-- slide --> delimiter present): splits by delimiter,
- * each slide is raw markdown that may contain text and Mermaid blocks.
+ * Slide mode (<!-- slide --> opening delimiter present): splits by explicit
+ * <!-- /slide --> closing tags, and each slide is raw markdown that may
+ * contain text and Mermaid blocks.
  *
  * Classic mode (no delimiter): extracts only Mermaid diagram blocks,
  * one per slide, identical to pre-slide-mode behaviour. Each block is
@@ -186,15 +204,10 @@ function getSlides(rawText) {
 /**
  * Generates a random nonce for Content Security Policy.
  *
- * @returns {string} Random 32-character alphanumeric string
+ * @returns {string} Random 32-character hex string
  */
 function getNonce() {
-	let text = "";
-	const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-	for (let i = 0; i < 32; i++) {
-		text += possible.charAt(Math.floor(Math.random() * possible.length));
-	}
-	return text;
+	return crypto.randomBytes(16).toString("hex");
 }
 
 /**
@@ -238,7 +251,7 @@ function resolveSettings() {
  * Returns an empty-state page when no slides are found.
  *
  * Supports both classic mode (one Mermaid diagram per slide) and slide mode
- * (mixed markdown and Mermaid content per slide, split by <!-- slide --> delimiters).
+ * (mixed markdown and Mermaid content per slide, split by <!-- slide --> / <!-- /slide --> delimiters).
  *
  * @param {string[]} slides - Array of slide strings (raw markdown)
  * @param {string} nonce - CSP nonce token
@@ -275,7 +288,7 @@ function getWebviewContent(slides, nonce, settings) {
 	<div class="empty">
 		<h2>No slides found</h2>
 		<p>This file doesn't contain any presentation slides.</p>
-		<p>Add <code>&lt;!-- slide --&gt;</code> delimiters to create slides,<br>
+		<p>Wrap slide content with <code>&lt;!-- slide --&gt;</code> and <code>&lt;!-- /slide --&gt;</code>,<br>
 		or include Mermaid code blocks for automatic diagram slides.</p>
 	</div>
 </body>
@@ -336,7 +349,7 @@ function postSlidesUpdate(panel, slides) {
  * Registers the "Show Markdown Presentation Preview" command and manages
  * a single webview panel that displays slides as a navigable slideshow.
  * Supports two modes: classic (one Mermaid diagram per slide) and slide
- * mode (mixed markdown and Mermaid content split by <!-- slide --> delimiters).
+ * mode (mixed markdown and Mermaid content split by <!-- slide --> / <!-- /slide --> delimiters).
  *
  * @param {vscode.ExtensionContext} context - Extension context provided by VS Code
  */

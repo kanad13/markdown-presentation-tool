@@ -13,8 +13,7 @@ This is the single source of truth for developing, testing, and releasing the Ma
 | `examples/01-classic-mode.md` | Classic mode test file (no slide delimiters) — one slide per Mermaid diagram, for backward compatibility |
 | `examples/02-slide-mode-basics.md` | Slide mode happy-path examples — text + diagrams, mermaid-only slides, both fence syntaxes |
 | `examples/03-slide-mode-advanced.md` | Slide mode edge cases — preamble, gaps, empty pairs, tall slide with Shift+scroll |
-| `examples/demo-script-short.md` | Recording script for the 30-second pitch video |
-| `examples/demo-script-long.md` | Recording script for the 3-minute feature-tour video |
+| `examples/04-demo-script.md` | Recording script / walkthrough content for demos and manual testing |
 
 
 ## Prerequisites
@@ -97,9 +96,24 @@ There are two GitHub Actions workflow files. They are **fully independent** — 
 | Workflow | File | Trigger | What it does |
 | --- | --- | --- | --- |
 | CI | `.github/workflows/ci.yml` | Every push to `main` and every PR | Lint, unit tests, package, verify `.vsix` |
-| Release Publish | `.github/workflows/release.yml` | Manual `workflow_dispatch` only | Validate version + CHANGELOG, package, create git tag, create GitHub Release, publish to Marketplace |
+| Release Publish | `.github/workflows/release.yml` | Manual `workflow_dispatch` only | Validate version + CHANGELOG, package, create git tag, create GitHub Release |
 
 A push **always** runs CI. A release **never** runs automatically — it requires an explicit manual trigger.
+
+
+## Periodic Maintenance
+
+If the project is quiet for a while, run this checklist monthly or quarterly so the extension stays healthy even without feature work:
+
+1. Install from the lockfile with `npm ci`.
+2. Check direct dependency drift with `npm outdated`.
+3. Review the pinned Mermaid runtime in `src/webview.html` and decide whether to move it to the latest stable tested release.
+4. Update direct dependencies deliberately (prefer small grouped updates over `npm audit fix --force`).
+5. Keep `@types/vscode` aligned with `engines.vscode` unless you intentionally raise the minimum supported VS Code version.
+6. Re-run `npm test` and `npm run package`.
+7. Review `npm audit` output and distinguish shipped-runtime risk from dev-tooling-only noise before acting.
+8. Sanity-check `readme.md`, `docs/architecture.md`, `docs/development.md`, and the example decks so the documented workflow still matches the code.
+9. If you plan to ship the changes, add a `CHANGELOG.md` entry and bump the version only after the repo is green.
 
 
 ## What Happens on Every Push
@@ -153,7 +167,7 @@ Example:
 ## [0.2.0] - 2026-04-15
 
 ### Added
-- Slide mode: split content at `<!-- slide -->` delimiters
+- Slide mode: split content between `<!-- slide -->` and `<!-- /slide -->` tags
 - Full Markdown rendering per slide: headings, lists, blockquotes, inline code, bold, italic
 ```
 
@@ -197,7 +211,18 @@ gh workflow run release.yml --ref main -f version=X.Y.Z
 8. Verifies the `.vsix` was produced
 9. Creates and pushes the `mpt-vX.Y.Z` git tag
 10. Creates a GitHub Release titled "Markdown Presentation Tool vX.Y.Z" with the `.vsix` attached and auto-generated release notes
-11. Publishes the extension to the VS Code Marketplace
+11. Stops after the GitHub Release is created; Marketplace publishing is still manual
+
+### Step 6 — Publish to the VS Code Marketplace manually
+
+After verifying the GitHub Release artifact, publish from the repo root:
+
+```bash
+npm ci
+npm run publish -- --pat <VSCE_PAT>
+```
+
+This uses the locally installed `@vscode/vsce` version from `devDependencies`.
 
 
 ## Troubleshooting
@@ -243,9 +268,13 @@ git push origin --delete mpt-vX.Y.Z
 
 Then re-run the workflow.
 
-### Release workflow failed: Marketplace publish failed
+### Manual Marketplace publish failed
 
-The most common cause is a missing or expired `VSCE_PAT`. Update the secret under **Settings → Secrets and variables → Actions**, then re-run the workflow from the **Actions** tab — no new commit is needed.
+The most common cause is an invalid or expired `VSCE_PAT`. Generate a fresh token for the Marketplace publisher account, then re-run:
+
+```bash
+npm run publish -- --pat <VSCE_PAT>
+```
 
 ### CI passed but nothing was published
 
@@ -257,5 +286,6 @@ Expected. CI never publishes. After CI passes, run the release workflow manually
 - All work happens on `main`.
 - Use descriptive commit messages. No special format is required for any type of commit.
 - Stage files explicitly rather than using `git add .`.
-- Let automation handle git tags, GitHub Releases, and Marketplace publishing — never create tags or publish manually.
+- Let automation handle git tags and GitHub Releases.
+- Publish to the Marketplace manually only after you verify the generated `.vsix` and GitHub Release.
 - Keep this file (`docs/development.md`) as the live source of truth for the development and release process.

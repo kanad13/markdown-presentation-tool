@@ -1,8 +1,8 @@
 {
 	"name": "markdown-presentation-tool",
 	"displayName": "Markdown Presentation Tool",
-	"description": "Turn any Markdown file into a navigable slide deck inside VS Code. Wrap content in <!-- slide --> tags, present with one click. Supports Mermaid diagrams, code blocks, and full Markdown rendering with live updates.",
-	"version": "1.2.1",
+	"description": "Turn any Markdown file into a navigable slide deck inside VS Code. Wrap content with <!-- slide --> and <!-- /slide -->, then present with one click. Supports Mermaid diagrams, code blocks, and full Markdown rendering with live updates.",
+	"version": "2.0.0",
 	"icon": "assets/icon.png",
 	"publisher": "KunalPathak",
 	"author": "Kunal Pathak",
@@ -147,10 +147,10 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
-		"@types/node": "^25.2.3",
-		"@types/vscode": "^1.109.0",
-		"@vscode/vsce": "^3.7.1",
-		"eslint": "^10.0.0"
+		"@types/node": "^25.6.0",
+		"@types/vscode": "1.109.0",
+		"@vscode/vsce": "^3.9.1",
+		"eslint": "^10.2.1"
 	},
 	"repository": {
 		"type": "git",

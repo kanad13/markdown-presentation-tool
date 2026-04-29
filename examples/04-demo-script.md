@@ -18,13 +18,13 @@
 
 - Action:
     - Click "Open Preview to the Side" and show the preview pane.
-    - It says "No slides found. Add `<!-- slide -->` to start a new slide."
+    - It says "No slides found. Wrap content with `<!-- slide -->` and `<!-- /slide -->` to create slides."
 - Annotation:
-    - To start a new slide, add `<!-- slide -->`.
+    - To start a new slide, add `<!-- slide -->` and close it with `<!-- /slide -->`.
 - Action:
-    - Add `<!-- slide -->` tags twice
+    - Add one opening tag and one closing tag
 - Annotation:
-    - Wrap content between `<!-- slide -->` tags.
+    - Wrap content between `<!-- slide -->` and `<!-- /slide -->`.
 - Action:
     - Add some content between the slide tags.
 
@@ -37,7 +37,7 @@ graph LR
     A[Turns Any Markdown File] --> B[Into a Presentation]
 ```
 
-<!-- slide -->
+<!-- /slide -->
 
 ---
 
@@ -79,13 +79,13 @@ graph LR
 
 - Horizontal rules
 
-<!-- slide -->
+<!-- /slide -->
 
 <!-- slide -->
 
 ![](https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/THE_VIEW_%28Virtual_Reality%29.jpg/960px-THE_VIEW_%28Virtual_Reality%29.jpg)
 
-<!-- slide -->
+<!-- /slide -->
 
 <!-- slide -->
 
@@ -94,7 +94,7 @@ flowchart TB
   A["Mermaid-only slides"] --> B["Supported too"]
 ```
 
-<!-- slide -->
+<!-- /slide -->
 
 <!-- slide -->
 
@@ -104,7 +104,7 @@ flowchart TB
   A --> C["Azure DevOps syntax"]
 :::
 
-<!-- slide -->
+<!-- /slide -->
 
 ---
 

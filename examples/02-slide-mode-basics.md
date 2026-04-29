@@ -1,6 +1,6 @@
 # Slide Mode Basics
 
-This file demonstrates the **happy path** of slide mode in Markdown Presentation Tool. Because it contains `<!-- slide -->` delimiters, each section wrapped in a delimiter pair becomes one slide with full markdown rendering.
+This file demonstrates the **happy path** of slide mode in Markdown Presentation Tool. Because it contains `<!-- slide -->` opening tags and `<!-- /slide -->` closing tags, each wrapped section becomes one slide with full markdown rendering.
 
 For edge cases (preamble handling, empty pairs, tall slides with Shift+scroll), see [03-slide-mode-advanced.md](03-slide-mode-advanced.md).
 
@@ -21,6 +21,8 @@ graph TD
     B -->|No| D[Debug]
     D --> B
 ```
+
+<!-- /slide -->
 
 <!-- slide -->
 
@@ -45,6 +47,8 @@ sequenceDiagram
     Reviewer->>Author: Approve
 ```
 
+<!-- /slide -->
+
 <!-- slide -->
 
 ## Mermaid-Only Slide
@@ -60,6 +64,8 @@ stateDiagram-v2
     Approved --> Published: Deploy
     Published --> [*]
 ```
+
+<!-- /slide -->
 
 <!-- slide -->
 
@@ -77,4 +83,4 @@ graph LR
     E --> F
 :::
 
-<!-- slide -->
+<!-- /slide -->

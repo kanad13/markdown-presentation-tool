@@ -110,18 +110,18 @@ describe("extractMermaidBlocks", () => {
 	});
 });
 
-describe("splitSlides (paired fence semantics)", () => {
+describe("splitSlides (explicit open/close tags)", () => {
 
 	it("extracts content between a single open/close pair", () => {
-		const input = "<!-- slide -->\n# Slide 1\nContent here\n<!-- slide -->";
+		const input = "<!-- slide -->\n# Slide 1\nContent here\n<!-- /slide -->";
 		const result = splitSlides(input);
 		assert.equal(result.length, 1);
 		assert.match(result[0], /Slide 1/);
 		assert.match(result[0], /Content here/);
 	});
 
-	it("extracts multiple paired slides", () => {
-		const input = "<!-- slide -->\n# Slide 1\n<!-- slide -->\n<!-- slide -->\n# Slide 2\n<!-- slide -->";
+	it("extracts multiple explicitly closed slides", () => {
+		const input = "<!-- slide -->\n# Slide 1\n<!-- /slide -->\n<!-- slide -->\n# Slide 2\n<!-- /slide -->";
 		const result = splitSlides(input);
 		assert.equal(result.length, 2);
 		assert.match(result[0], /Slide 1/);
@@ -129,7 +129,7 @@ describe("splitSlides (paired fence semantics)", () => {
 	});
 
 	it("discards content outside pairs (preamble, gaps, trailing)", () => {
-		const input = "# Preamble\n<!-- slide -->\n# Slide 1\n<!-- slide -->\nGap text\n<!-- slide -->\n# Slide 2\n<!-- slide -->\nTrailing";
+		const input = "# Preamble\n<!-- slide -->\n# Slide 1\n<!-- /slide -->\nGap text\n<!-- slide -->\n# Slide 2\n<!-- /slide -->\nTrailing";
 		const result = splitSlides(input);
 		assert.equal(result.length, 2);
 		assert.match(result[0], /Slide 1/);
@@ -139,30 +139,30 @@ describe("splitSlides (paired fence semantics)", () => {
 		assert.doesNotMatch(result[1], /Trailing/);
 	});
 
-	it("implicitly closes a slide at EOF (odd number of delimiters)", () => {
-		const input = "<!-- slide -->\n# Slide 1\n<!-- slide -->\n<!-- slide -->\n# Slide 2";
+	it("implicitly closes a slide at EOF when no closing tag is present", () => {
+		const input = "<!-- slide -->\n# Slide 1\n<!-- /slide -->\n<!-- slide -->\n# Slide 2";
 		const result = splitSlides(input);
 		assert.equal(result.length, 2);
 		assert.match(result[1], /Slide 2/);
 	});
 
-	it("is case-insensitive on the delimiter", () => {
-		const input = "<!-- SLIDE -->\nSlide A\n<!-- SLIDE -->";
+	it("is case-insensitive on opening and closing tags", () => {
+		const input = "<!-- SLIDE -->\nSlide A\n<!-- /SLIDE -->";
 		const result = splitSlides(input);
 		assert.equal(result.length, 1);
 		assert.match(result[0], /Slide A/);
 	});
 
-	it("ignores delimiter inside fenced code block", () => {
-		const input = "<!-- slide -->\n# Slide 1\n```js\n<!-- slide -->\n```\n<!-- slide -->\n<!-- slide -->\n# Slide 2\n<!-- slide -->";
+	it("ignores delimiters inside fenced code block", () => {
+		const input = "<!-- slide -->\n# Slide 1\n```js\n<!-- /slide -->\n```\n<!-- /slide -->\n<!-- slide -->\n# Slide 2\n<!-- /slide -->";
 		const result = splitSlides(input);
 		assert.equal(result.length, 2);
 		assert.match(result[0], /Slide 1/);
 		assert.match(result[1], /Slide 2/);
 	});
 
-	it("ignores delimiter inside ::: mermaid block", () => {
-		const input = "<!-- slide -->\n# Slide 1\n::: mermaid\ngraph TD\n  A-->B\n:::\n<!-- slide -->";
+	it("ignores delimiters inside ::: mermaid block", () => {
+		const input = "<!-- slide -->\n# Slide 1\n::: mermaid\ngraph TD\n  A-->B\n<!-- /slide -->\n:::\n<!-- /slide -->";
 		const result = splitSlides(input);
 		assert.equal(result.length, 1);
 		assert.match(result[0], /Slide 1/);
@@ -170,10 +170,25 @@ describe("splitSlides (paired fence semantics)", () => {
 	});
 
 	it("skips empty slides (open immediately followed by close)", () => {
-		const input = "<!-- slide -->\n<!-- slide -->\n<!-- slide -->\n# Real slide\n<!-- slide -->";
+		const input = "<!-- slide -->\n<!-- /slide -->\n<!-- slide -->\n# Real slide\n<!-- /slide -->";
 		const result = splitSlides(input);
 		assert.equal(result.length, 1);
 		assert.match(result[0], /Real slide/);
+	});
+
+	it("ignores stray closing tags outside slides", () => {
+		const input = "<!-- /slide -->\n<!-- slide -->\n# Slide 1\n<!-- /slide -->\n<!-- /slide -->";
+		const result = splitSlides(input);
+		assert.equal(result.length, 1);
+		assert.match(result[0], /Slide 1/);
+	});
+
+	it("does not treat <!-- slide --> as a closing tag anymore", () => {
+		const input = "<!-- slide -->\n# Slide 1\n<!-- slide -->\nMore content\n<!-- /slide -->";
+		const result = splitSlides(input);
+		assert.equal(result.length, 1);
+		assert.match(result[0], /Slide 1/);
+		assert.match(result[0], /More content/);
 	});
 
 	it("returns empty array when no delimiter present", () => {
@@ -187,7 +202,7 @@ describe("splitSlides (paired fence semantics)", () => {
 	});
 
 	it("skips YAML front matter at start of file", () => {
-		const input = "---\ntitle: My Notes\ndate: 2024-01-01\n---\n# Preamble\n<!-- slide -->\n# Slide 1\n<!-- slide -->";
+		const input = "---\ntitle: My Notes\ndate: 2024-01-01\n---\n# Preamble\n<!-- slide -->\n# Slide 1\n<!-- /slide -->";
 		const result = splitSlides(input);
 		assert.equal(result.length, 1);
 		assert.match(result[0], /Slide 1/);
@@ -196,7 +211,7 @@ describe("splitSlides (paired fence semantics)", () => {
 	});
 
 	it("does not treat --- as a slide delimiter", () => {
-		const input = "<!-- slide -->\n# Slide 1\n---\nMore content\n<!-- slide -->";
+		const input = "<!-- slide -->\n# Slide 1\n---\nMore content\n<!-- /slide -->";
 		const result = splitSlides(input);
 		assert.equal(result.length, 1);
 		assert.match(result[0], /Slide 1/);
@@ -223,6 +238,10 @@ describe("hasSlideDelimiter", () => {
 		assert.equal(hasSlideDelimiter("content\n<!-- SLIDE -->\nmore"), true);
 	});
 
+	it("does not treat closing tags as the slide-mode signal", () => {
+		assert.equal(hasSlideDelimiter("content\n<!-- /slide -->\nmore"), false);
+	});
+
 	it("requires delimiter to be on its own line", () => {
 		// inline comment should not trigger slide mode
 		assert.equal(hasSlideDelimiter("some <!-- slide --> inline text"), false);
@@ -246,8 +265,8 @@ describe("getSlides", () => {
 		assert.deepEqual(getSlides("# Just markdown, no diagrams"), []);
 	});
 
-	it("slide mode: extracts paired slides", () => {
-		const input = "# Preamble\n<!-- slide -->\n# Slide 1\n```mermaid\ngraph TD\n  A-->B\n```\n<!-- slide -->\nGap\n<!-- slide -->\n# Slide 2\nParagraph\n<!-- slide -->";
+	it("slide mode: extracts explicitly closed slides", () => {
+		const input = "# Preamble\n<!-- slide -->\n# Slide 1\n```mermaid\ngraph TD\n  A-->B\n```\n<!-- /slide -->\nGap\n<!-- slide -->\n# Slide 2\nParagraph\n<!-- /slide -->";
 		const result = getSlides(input);
 		assert.equal(result.length, 2);
 		assert.match(result[0], /Slide 1/);
@@ -255,7 +274,7 @@ describe("getSlides", () => {
 	});
 
 	it("slide mode: discards content outside pairs", () => {
-		const input = "<!-- slide -->\n# Title\nSome text.\n<!-- slide -->\nIgnored gap.\n<!-- slide -->\n## Second\nMore text.\n<!-- slide -->";
+		const input = "<!-- slide -->\n# Title\nSome text.\n<!-- /slide -->\nIgnored gap.\n<!-- slide -->\n## Second\nMore text.\n<!-- /slide -->";
 		const result = getSlides(input);
 		assert.equal(result.length, 2);
 		assert.match(result[0], /Some text/);
@@ -264,7 +283,7 @@ describe("getSlides", () => {
 	});
 
 	it("slide mode: preserves mermaid-only slides", () => {
-		const input = "<!-- slide -->\n# Intro\n<!-- slide -->\n<!-- slide -->\n```mermaid\ngraph TD\n  A-->B\n```\n<!-- slide -->";
+		const input = "<!-- slide -->\n# Intro\n<!-- /slide -->\n<!-- slide -->\n```mermaid\ngraph TD\n  A-->B\n```\n<!-- /slide -->";
 		const result = getSlides(input);
 		assert.equal(result.length, 2);
 		assert.match(result[1], /graph TD/);
@@ -276,6 +295,14 @@ describe("getSlides", () => {
 		assert.equal(result.length, 1);
 		assert.match(result[0], /Actual slide/);
 		assert.doesNotMatch(result[0], /Preamble/);
+	});
+
+	it("slide mode: legacy closing tags no longer split slides", () => {
+		const input = "<!-- slide -->\n# Intro\n<!-- slide -->\n## Still same slide\n<!-- /slide -->";
+		const result = getSlides(input);
+		assert.equal(result.length, 1);
+		assert.match(result[0], /Intro/);
+		assert.match(result[0], /Still same slide/);
 	});
 
 });
@@ -357,7 +384,13 @@ describe("getWebviewContent", () => {
 	it("returns empty-state HTML with 'No slides found' heading when slides array is empty", () => {
 		const html = getWebviewContent([], nonce, defaultSettings);
 		assert.ok(html.includes("<h2>No slides found</h2>"), "missing h2 heading");
+		assert.ok(html.includes("&lt;!-- /slide --&gt;"), "missing explicit closing tag guidance");
 		assert.ok(!html.includes("{{CUSTOM_STYLES}}"), "placeholder left unreplaced");
+	});
+
+	it("uses a pinned Mermaid runtime URL", () => {
+		const html = getWebviewContent(["# Hello"], nonce, defaultSettings);
+		assert.ok(html.includes("mermaid@11.14.0"), "missing pinned Mermaid version");
 	});
 
 	it("replaces all placeholders when slides are present", () => {

@@ -182,7 +182,7 @@
 	<div class="slide-counter"></div>
 
 	<script type="module" nonce="{{NONCE}}">
-		import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+		import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.14.0/dist/mermaid.esm.min.mjs';
 
 		const slides = {{SLIDES_JSON}};
 		let currentIndex = 0;
@@ -240,7 +240,7 @@
 			for (let i = 0; i < lines.length; i++) {
 				const line = lines[i];
 
-				// ── Mermaid backtick fences — NOT HTML-escaped (Mermaid reads raw textContent)
+				// ── Mermaid backtick fences — HTML-escaped so diagram text stays text-only in the DOM
 				if (!inCode && !inMermaid && /^```mermaid\s*$/.test(line)) {
 					closeList();
 					inMermaid = true;
@@ -253,7 +253,7 @@
 					continue;
 				}
 				if (inMermaid) {
-					html += line + '\n';   // raw — no escapeHtml here
+					html += escapeHtml(line) + '\n';
 					continue;
 				}
 
@@ -274,7 +274,7 @@
 					continue;
 				}
 
-				// ── Azure DevOps ::: mermaid — NOT HTML-escaped
+				// ── Azure DevOps ::: mermaid — HTML-escaped for the same reason
 				if (!inMermaidColon && /^:::\s*mermaid/.test(line)) {
 					closeList();
 					inMermaidColon = true;
@@ -287,7 +287,7 @@
 					continue;
 				}
 				if (inMermaidColon) {
-					html += line + '\n';   // raw — no escapeHtml here
+					html += escapeHtml(line) + '\n';
 					continue;
 				}
 

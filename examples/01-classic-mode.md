@@ -1,6 +1,6 @@
 # Markdown Presentation Tool — Classic Mode Test
 
-This file contains diverse Mermaid diagram types for testing classic mode rendering and navigation. Because it has no `<!-- slide -->` delimiters, the extension uses classic mode: one Mermaid diagram per slide.
+This file contains diverse Mermaid diagram types for testing classic mode rendering and navigation. Because it has no `<!-- slide -->` opening tags, the extension uses classic mode: one Mermaid diagram per slide.
 
 ## About This Extension
 
@@ -8,7 +8,7 @@ This file contains diverse Mermaid diagram types for testing classic mode render
 
 - In **classic mode** (this file): each Mermaid code block becomes one slide.
 
-- In **slide mode**: add `<!-- slide -->` delimiters to create mixed-content slides with text and diagrams. See `examples/02-slide-mode-basics.md` for a demo.
+- In **slide mode**: wrap content with `<!-- slide -->` and `<!-- /slide -->` to create mixed-content slides with text and diagrams. See `examples/02-slide-mode-basics.md` for a demo.
 
 - Make a presentation directly from your markdown notes. No extra setup, no exports.
 

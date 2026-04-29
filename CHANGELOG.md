@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2026-04-29
+
+### Breaking Changes
+- Slide mode now uses `<!-- slide -->` to open slides and `<!-- /slide -->` to close them. Legacy files that used `<!-- slide -->` as both the opening and closing tag must be updated.
+
+### Changed
+- README, architecture docs, development docs, tests, and example decks were updated to use the explicit `<!-- /slide -->` closing tag.
+- Development docs now include a periodic maintenance checklist and correctly document that Marketplace publishing is a manual step after the GitHub Release is created.
+
+### Security
+- CSP nonces are now generated with Node's `crypto` module instead of `Math.random()`.
+- Mermaid diagram source is HTML-escaped before being inserted into the webview DOM.
+- Mermaid CDN loading is pinned to `11.14.0` so runtime behavior stays stable between extension releases.
+
+### Maintenance
+- Dev tooling was refreshed to current stable versions compatible with the existing VS Code engine floor.
+
 ## [1.2.1] - 2026-04-18
 
 ### Changed
@@ -48,8 +65,7 @@ First official release of Markdown Presentation Tool — the project is feature-
 - README updated with hero and full-tour demo GIFs
 
 ### Added
-- `examples/demo-script-short.md` — recording script for the 30-second pitch video
-- `examples/demo-script-long.md` — recording script for the 3-minute feature tour video
+- `examples/04-demo-script.md` — recording script for demos and manual walkthroughs
 
 ## [0.3.0] - 2026-04-14
 

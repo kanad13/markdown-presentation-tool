@@ -16,7 +16,7 @@ This is the `markdown-presentation-tool` repository. All development happens on 
 
 This extension presents markdown content as a navigable slideshow in a VS Code webview. The entry point is `getSlides()` in `src/extension.js`, which auto-detects the extraction mode:
 
-**Slide mode** (file contains `<!-- slide -->`): Delimiters work as paired fences — the 1st opens a slide, the 2nd closes it, the 3rd opens the next, etc. Only content inside open/close pairs becomes a slide. Content outside pairs (preamble, notes between slides, trailing text) is ignored. If the file ends with a slide still open, EOF acts as implicit close. Empty slides are skipped.
+**Slide mode** (file contains `<!-- slide -->`): `<!-- slide -->` opens a slide and `<!-- /slide -->` closes it. Only content inside open/close pairs becomes a slide. Content outside pairs (preamble, notes between slides, trailing text) is ignored. If the file ends with a slide still open, EOF acts as implicit close. Empty slides are skipped.
 
 **Mermaid-only mode** (no `<!-- slide -->` in the file): Backward-compatible path from the original `mermaid-slideshow` extension. Extracts only Mermaid diagram blocks, one per slide. All surrounding markdown text is discarded.
 
@@ -34,9 +34,9 @@ Both modes share the same webview renderer (`renderMarkdownToHtml` in `src/webvi
 - All extension logic in `src/extension.js`
 - Single webview panel, reused across files
 - No TypeScript, no frameworks, no bundled webview scripts
-- Mermaid CDN: `https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs`
+- Mermaid CDN: `https://cdn.jsdelivr.net/npm/mermaid@11.14.0/dist/mermaid.esm.min.mjs`
 - `getSlides()` is the single entry point for slide extraction — never call `extractMermaidBlocks()` or `splitSlides()` directly from `activate()`
-- Slide delimiter: `<!-- slide -->` (HTML comment on its own line, case-insensitive, paired open/close semantics)
+- Slide delimiters: `<!-- slide -->` opens and `<!-- /slide -->` closes (HTML comments on their own lines, case-insensitive)
 - Do NOT use `---` as a slide delimiter — it conflicts with Markdown `<hr>` and YAML front matter
 - Two Mermaid syntaxes supported inside slides: backtick (` ```mermaid `) and Azure DevOps (`:::`)
 

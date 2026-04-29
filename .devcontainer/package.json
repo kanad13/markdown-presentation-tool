@@ -2,6 +2,6 @@
 	"name": "devcontainer-template-node",
 	"version": "1.0.0",
 	"dependencies": {
-		"figlet": "^1.6.0"
+		"figlet": "^1.11.0"
 	}
 }

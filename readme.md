@@ -19,7 +19,7 @@ Stop wasting time exporting to PDF or building clunky PPT files. Write your cont
 - **Rich Media & Diagrams:** Full support for Mermaid.js diagrams and remote images.
 - **Customizable Styles:** Control alignment, font size, and background colors to suit your brand.
 - **Theme Awareness:** Automatically syncs with your VS Code theme (Light/Dark) for a seamless look.
-- **Clean Document Structure:** Uses `<!-- slide -->` tags that remain invisible in standard Markdown previews, keeping your source files clean.
+- **Clean Document Structure:** Uses `<!-- slide -->` and `<!-- /slide -->` tags that remain invisible in standard Markdown previews, keeping your source files clean.
 
 ## Getting Started
 
@@ -56,7 +56,7 @@ Adjust these in VS Code Settings (`Cmd+,` / `Ctrl+,`) under **Markdown Presentat
 
 ## How to Create Slides
 
-Defining a slide is simple. Separate your content using the `<!-- slide -->` comment tag.
+Defining a slide is simple. Use `<!-- slide -->` to open a slide and `<!-- /slide -->` to close it.
 
 ````markdown
 <!-- slide -->
@@ -65,11 +65,10 @@ Defining a slide is simple. Separate your content using the `<!-- slide -->` com
 
 Welcome to the presentation!
 
-<!-- slide -->
+<!-- /slide -->
 
-# Private Notes
-
-- Content outside of slide tags is not shown during the presentation.
+Speaker notes, draft text, or reminders can live here.
+They stay in the editor and never appear in the slideshow.
 
 <!-- slide -->
 
@@ -82,7 +81,10 @@ graph LR
 
 - Images from the web work too!
 
-<!-- slide -->
+<!-- /slide -->
+
+- Content outside slide tags is not shown during the presentation.
+- Keep speaker notes, prompts, or draft edits in the same file without leaking them onto slides.
 ````
 ## Contributing & Support
 

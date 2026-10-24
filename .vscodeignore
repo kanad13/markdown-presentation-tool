@@ -23,3 +23,7 @@ assets/simple-start.gif
 assets/test-images
 assets/button.svg
 assets/extension-demo.gif
+scripts/
+AGENTS.md
+.prettierrc.json
+.prettierignore

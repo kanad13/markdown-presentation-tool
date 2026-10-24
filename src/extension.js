@@ -3,6 +3,24 @@ const vscode = require("vscode");
 const fs = require("fs");
 const path = require("path");
 
+// Single source of truth for the runtime-loaded Mermaid version. An exact x.y.z
+// keeps rendering stable between extension releases; the CSP script-src below
+// is scoped to this directory so no other jsDelivr package can execute.
+const MERMAID_VERSION = "12.1.0";
+const MERMAID_BASE_URL = `https://cdn.jsdelivr.net/npm/mermaid@${MERMAID_VERSION}/dist/`;
+const MERMAID_MODULE_URL = MERMAID_BASE_URL + "mermaid.esm.min.mjs";
+
+// Setting values are interpolated into CSS and a JS string. VS Code does not
+// enforce package.json enums on values written by hand into settings.json,
+// and workspace settings come from the opened folder, so every value is
+// checked against an allow-list before it reaches the template.
+const MERMAID_THEMES = ["default", "dark", "forest", "neutral"];
+const ALIGNMENTS = ["left", "center", "right"];
+const FONT_SIZES = ["small", "medium", "large"];
+// Hex, a named color, or a color function without nested calls. Excludes
+// url(), var() and anything containing ; { } that could end the declaration.
+const SAFE_CSS_COLOR = /^(#[0-9a-f]{3,8}|[a-z]+|(?:rgb|hsl|hwb|lab|lch|oklab|oklch)a?\([0-9a-z\s.,%/+-]*\))$/i;
+
 const OPEN_SLIDE_DELIMITER = /^<!--\s*slide\s*-->\s*$/i;
 const CLOSE_SLIDE_DELIMITER = /^<!--\s*\/slide\s*-->\s*$/i;
 
@@ -21,20 +39,11 @@ const CLOSE_SLIDE_DELIMITER = /^<!--\s*\/slide\s*-->\s*$/i;
 function extractMermaidBlocks(rawText) {
 	const blocks = [];
 
-	// Backtick style: ```mermaid ... ```
-	const backtickRegex = /```mermaid\s*\n([\s\S]*?)```/g;
+	// One alternation keeps blocks in document order when both syntaxes are mixed.
+	const blockRegex = /```mermaid\s*\n([\s\S]*?)```|:::\s*mermaid\s*\n([\s\S]*?):::/g;
 	let match;
-	while ((match = backtickRegex.exec(rawText)) !== null) {
-		const code = match[1].trim();
-		if (code) {
-			blocks.push(code);
-		}
-	}
-
-	// Azure DevOps style: ::: mermaid ... :::
-	const colonRegex = /:::\s*mermaid\s*\n([\s\S]*?):::/g;
-	while ((match = colonRegex.exec(rawText)) !== null) {
-		const code = match[1].trim();
+	while ((match = blockRegex.exec(rawText)) !== null) {
+		const code = (match[1] ?? match[2]).trim();
 		if (code) {
 			blocks.push(code);
 		}
@@ -211,6 +220,33 @@ function getNonce() {
 }
 
 /**
+ * Returns value when it is one of the allowed strings, otherwise the fallback.
+ *
+ * @param {unknown} value - Raw configuration value
+ * @param {string[]} allowed - Accepted values
+ * @param {string} fallback - Value used when the input is not accepted
+ * @returns {string} A member of allowed, or the fallback
+ */
+function pickOption(value, allowed, fallback) {
+	return typeof value === "string" && allowed.includes(value) ? value : fallback;
+}
+
+/**
+ * Returns a CSS color that is safe to place in a declaration, or "" so the
+ * VS Code editor background applies.
+ *
+ * @param {unknown} value - Raw backgroundColor setting
+ * @returns {string} Trimmed color string, or an empty string when rejected
+ */
+function sanitizeColor(value) {
+	if (typeof value !== "string") {
+		return "";
+	}
+	const trimmed = value.trim();
+	return SAFE_CSS_COLOR.test(trimmed) ? trimmed : "";
+}
+
+/**
  * Reads user-configurable settings and resolves derived values.
  *
  * Returns an object with:
@@ -229,7 +265,7 @@ function getNonce() {
  */
 function resolveSettings() {
 	const cfg = vscode.workspace.getConfiguration("markdownPresentation");
-	const themeSetting = cfg.get("slide.mermaidTheme", "default");
+	const themeSetting = pickOption(cfg.get("slide.mermaidTheme", "default"), MERMAID_THEMES, "default");
 	const kind = vscode.window.activeColorTheme.kind;
 	const isDark = kind === vscode.ColorThemeKind.Dark || kind === vscode.ColorThemeKind.HighContrast;
 	const mermaidTheme = themeSetting === "default" ? (isDark ? "dark" : "default") : themeSetting;
@@ -237,10 +273,10 @@ function resolveSettings() {
 		mermaidTheme,
 		showCounter: cfg.get("slide.showCounter", true),
 		showNavigationArrows: cfg.get("slide.showNavigationArrows", true),
-		headingAlignment: cfg.get("slide.headingAlignment", "left"),
-		contentAlignment: cfg.get("slide.contentAlignment", "left"),
-		fontSize: cfg.get("slide.fontSize", "medium"),
-		backgroundColor: cfg.get("slide.backgroundColor", ""),
+		headingAlignment: pickOption(cfg.get("slide.headingAlignment", "left"), ALIGNMENTS, "left"),
+		contentAlignment: pickOption(cfg.get("slide.contentAlignment", "left"), ALIGNMENTS, "left"),
+		fontSize: pickOption(cfg.get("slide.fontSize", "medium"), FONT_SIZES, "medium"),
+		backgroundColor: sanitizeColor(cfg.get("slide.backgroundColor", "")),
 	};
 }
 
@@ -256,9 +292,10 @@ function resolveSettings() {
  * @param {string[]} slides - Array of slide strings (raw markdown)
  * @param {string} nonce - CSP nonce token
  * @param {{mermaidTheme: string, showCounter: boolean, showNavigationArrows: boolean, headingAlignment: string, contentAlignment: string, fontSize: string, backgroundColor: string}} settings - Resolved user settings
+ * @param {string} [docKey] - Identifier of the document being shown; the webview stores its slide position under this key so a reload keeps the position only for the same file
  * @returns {string} Complete HTML page
  */
-function getWebviewContent(slides, nonce, settings) {
+function getWebviewContent(slides, nonce, settings, docKey = "") {
 	if (slides.length === 0) {
 		return `<!DOCTYPE html>
 <html lang="en">
@@ -302,9 +339,11 @@ function getWebviewContent(slides, nonce, settings) {
 		slides.length === 1 ? "single-slide" : "",
 		settings.showCounter ? "" : "hide-counter",
 		settings.showNavigationArrows ? "" : "hide-nav",
-	].filter(Boolean).join(" ");
+	]
+		.filter(Boolean)
+		.join(" ");
 
-	const fontSizeMap = /** @type {Record<string, string>} */({ small: "0.85em", medium: "1em", large: "1.25em" });
+	const fontSizeMap = /** @type {Record<string, string>} */ ({ small: "0.85em", medium: "1em", large: "1.25em" });
 	const customStyleRules = [];
 	if (settings.headingAlignment !== "left") {
 		customStyleRules.push(`.slide-inner h1, .slide-inner h2, .slide-inner h3,
@@ -321,11 +360,24 @@ function getWebviewContent(slides, nonce, settings) {
 	}
 	const customStyles = customStyleRules.join("\n		");
 
-	html = html.replace(/\{\{NONCE\}\}/g, nonce);
-	html = html.replace("{{THEME}}", settings.mermaidTheme);
-	html = html.replace("{{SLIDES_JSON}}", JSON.stringify(slides).replace(/</g, "\\u003c"));
-	html = html.replace("{{BODY_CLASSES}}", bodyClasses);
-	html = html.replace("{{CUSTOM_STYLES}}", customStyles);
+	// One pass over the template: slide text is user content and must never be
+	// rescanned for placeholders, and a replacer function avoids the special
+	// meaning of "$&", "$'" and "$$" in String.replace replacement strings.
+	const jsonForScript = (/** @type {unknown} */ v) => JSON.stringify(v).replace(/</g, "\\u003c");
+	/** @type {Record<string, string>} */
+	const values = {
+		NONCE: nonce,
+		THEME: settings.mermaidTheme,
+		MERMAID_BASE_URL,
+		MERMAID_MODULE_URL_JSON: jsonForScript(MERMAID_MODULE_URL),
+		SLIDES_JSON: jsonForScript(slides),
+		DOC_KEY_JSON: jsonForScript(docKey),
+		BODY_CLASSES: bodyClasses,
+		CUSTOM_STYLES: customStyles,
+	};
+	html = html.replace(/\{\{([A-Z_]+)\}\}/g, (match, name) =>
+		Object.prototype.hasOwnProperty.call(values, name) ? values[name] : match
+	);
 
 	return html;
 }
@@ -339,7 +391,7 @@ function getWebviewContent(slides, nonce, settings) {
 function postSlidesUpdate(panel, slides) {
 	panel.webview.postMessage({
 		type: "update",
-		slides: slides
+		slides: slides,
 	});
 }
 
@@ -362,103 +414,116 @@ function activate(context) {
 	let currentDocument = undefined;
 	/** @type {ReturnType<typeof setTimeout> | undefined} */
 	let debounceTimer = undefined;
+	// Set when an edit arrived while the panel was hidden. VS Code drops a
+	// hidden webview's DOM and restores it from webview.html, so a message sent
+	// meanwhile is lost and the restored page would show the old text.
+	let missedUpdateWhileHidden = false;
 
-	const disposable = vscode.commands.registerCommand(
-		"markdownPresentation.showPreview",
-		function () {
-			const editor = vscode.window.activeTextEditor;
-			if (!editor) {
-				vscode.window.showErrorMessage("No active editor");
-				return;
-			}
+	function cancelPendingUpdate() {
+		clearTimeout(debounceTimer);
+		debounceTimer = undefined;
+	}
 
-			const doc = editor.document;
-			if (doc.languageId !== "markdown") {
-				vscode.window.showErrorMessage("Not a Markdown file");
-				return;
-			}
-
-			const slides = getSlides(doc.getText());
-			const settings = resolveSettings();
-			const nonce = getNonce();
-
-			if (currentPanel) {
-				currentPanel.reveal(vscode.ViewColumn.Beside);
-				currentDocument = doc;
-				currentPanel.webview.html = getWebviewContent(slides, nonce, settings);
-			} else {
-				currentPanel = vscode.window.createWebviewPanel(
-					"markdownPresentation",
-					"Markdown Presentation",
-					vscode.ViewColumn.Beside,
-					{ enableScripts: true }
-				);
-
-				currentDocument = doc;
-				currentPanel.webview.html = getWebviewContent(slides, nonce, settings);
-
-				currentPanel.onDidDispose(
-					() => {
-						currentPanel = undefined;
-						currentDocument = undefined;
-					},
-					null,
-					context.subscriptions
-				);
-			}
+	// Full re-render. Used when the HTML itself must change (settings, theme,
+	// a different file, becoming visible after a missed edit).
+	function renderPanel() {
+		if (!currentPanel || !currentDocument) {
+			return;
 		}
-	);
+		missedUpdateWhileHidden = false;
+		currentPanel.webview.html = getWebviewContent(
+			getSlides(currentDocument.getText()),
+			getNonce(),
+			resolveSettings(),
+			currentDocument.uri.toString()
+		);
+	}
+
+	const disposable = vscode.commands.registerCommand("markdownPresentation.showPreview", function () {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) {
+			vscode.window.showErrorMessage("No active editor");
+			return;
+		}
+
+		const doc = editor.document;
+		if (doc.languageId !== "markdown") {
+			vscode.window.showErrorMessage("Not a Markdown file");
+			return;
+		}
+
+		// A pending update belongs to the previously shown file.
+		cancelPendingUpdate();
+		currentDocument = doc;
+
+		if (currentPanel) {
+			currentPanel.reveal(vscode.ViewColumn.Beside);
+		} else {
+			currentPanel = vscode.window.createWebviewPanel(
+				"markdownPresentation",
+				"Markdown Presentation",
+				vscode.ViewColumn.Beside,
+				{ enableScripts: true }
+			);
+
+			currentPanel.onDidDispose(
+				() => {
+					cancelPendingUpdate();
+					currentPanel = undefined;
+					currentDocument = undefined;
+				},
+				null,
+				context.subscriptions
+			);
+
+			currentPanel.onDidChangeViewState(
+				(e) => {
+					if (e.webviewPanel.visible && missedUpdateWhileHidden) {
+						renderPanel();
+					}
+				},
+				null,
+				context.subscriptions
+			);
+		}
+
+		renderPanel();
+	});
 
 	// Live-update preview when source file changes (debounced)
-	const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument(
-		(e) => {
-			if (
-				currentPanel &&
-				currentDocument &&
-				e.document.uri.toString() === currentDocument.uri.toString()
-			) {
-				const panel = currentPanel;
-				clearTimeout(debounceTimer);
-				debounceTimer = setTimeout(() => {
-					const slides = getSlides(e.document.getText());
-					postSlidesUpdate(panel, slides);
-				}, 300);
-			}
+	const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument((e) => {
+		if (currentPanel && currentDocument && e.document.uri.toString() === currentDocument.uri.toString()) {
+			const panel = currentPanel;
+			cancelPendingUpdate();
+			debounceTimer = setTimeout(() => {
+				debounceTimer = undefined;
+				if (panel !== currentPanel || !currentDocument) {
+					return;
+				}
+				if (!panel.visible) {
+					missedUpdateWhileHidden = true;
+					return;
+				}
+				postSlidesUpdate(panel, getSlides(currentDocument.getText()));
+			}, 300);
 		}
-	);
+	});
 
 	// Re-render webview when any Markdown Presentation setting changes
-	const changeConfigSubscription = vscode.workspace.onDidChangeConfiguration(
-		(e) => {
-			if (
-				e.affectsConfiguration("markdownPresentation") &&
-				currentPanel &&
-				currentDocument
-			) {
-				const settings = resolveSettings();
-				const nonce = getNonce();
-				const slides = getSlides(currentDocument.getText());
-				currentPanel.webview.html = getWebviewContent(slides, nonce, settings);
-			}
+	const changeConfigSubscription = vscode.workspace.onDidChangeConfiguration((e) => {
+		if (e.affectsConfiguration("markdownPresentation")) {
+			renderPanel();
 		}
-	);
+	});
 
 	// Re-render when VS Code color theme changes (affects auto-detected Mermaid theme)
-	const changeColorThemeSubscription = vscode.window.onDidChangeActiveColorTheme(
-		() => {
-			if (currentPanel && currentDocument) {
-				const settings = resolveSettings();
-				const nonce = getNonce();
-				const slides = getSlides(currentDocument.getText());
-				currentPanel.webview.html = getWebviewContent(slides, nonce, settings);
-			}
-		}
-	);
+	const changeColorThemeSubscription = vscode.window.onDidChangeActiveColorTheme(() => renderPanel());
 
 	context.subscriptions.push(disposable);
 	context.subscriptions.push(changeDocumentSubscription);
 	context.subscriptions.push(changeConfigSubscription);
 	context.subscriptions.push(changeColorThemeSubscription);
+	context.subscriptions.push({ dispose: cancelPendingUpdate });
 }
 
 function deactivate() {}
@@ -472,4 +537,6 @@ module.exports = {
 	getSlides,
 	resolveSettings,
 	getWebviewContent,
+	getNonce,
+	MERMAID_VERSION,
 };

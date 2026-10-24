@@ -1,42 +1,7 @@
 const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 
-// Minimal vscode stub - extension.js requires vscode at module level.
-// Tests can mutate `configValues` and `colorThemeKind` to drive resolveSettings().
-/** @type {Record<string, unknown>} */
-const configValues = {};
-const colorThemeState = { kind: 1 };
-
-const Module = /** @type {any} */ (require("node:module"));
-const originalResolve = Module._resolveFilename;
-Module._resolveFilename = function (/** @type {string} */ request, /** @type {any[]} */ ...args) {
-	if (request === "vscode") return "vscode";
-	return originalResolve.call(this, request, ...args);
-};
-/** @type {any} */ (require.cache)["vscode"] = {
-	id: "vscode",
-	filename: "vscode",
-	loaded: true,
-	exports: {
-		workspace: {
-			getConfiguration: () => ({
-				get: (/** @type {string} */ key, /** @type {unknown} */ defaultValue) =>
-					key in configValues ? configValues[key] : defaultValue,
-			}),
-			onDidChangeTextDocument: () => ({ dispose() {} }),
-			onDidChangeConfiguration: () => ({ dispose() {} }),
-		},
-		window: {
-			get activeColorTheme() {
-				return { kind: colorThemeState.kind };
-			},
-			onDidChangeActiveColorTheme: () => ({ dispose() {} }),
-		},
-		commands: { registerCommand: () => ({ dispose() {} }) },
-		ColorThemeKind: { Light: 1, Dark: 2, HighContrast: 3 },
-		ViewColumn: { Beside: 2 },
-	},
-};
+const { configValues, colorThemeState, resetVscode: resetConfig } = require("./support/vscode-stub");
 
 const {
 	extractMermaidBlocks,
@@ -45,12 +10,8 @@ const {
 	getSlides,
 	resolveSettings,
 	getWebviewContent,
+	MERMAID_VERSION,
 } = require("../src/extension");
-
-function resetConfig() {
-	for (const k of Object.keys(configValues)) delete configValues[k];
-	colorThemeState.kind = 1;
-}
 
 describe("extractMermaidBlocks", () => {
 	it("extracts a single backtick-fenced mermaid block", () => {
@@ -409,7 +370,7 @@ describe("getWebviewContent", () => {
 
 	it("uses a pinned Mermaid runtime URL", () => {
 		const html = getWebviewContent(["# Hello"], nonce, defaultSettings);
-		assert.ok(html.includes("mermaid@11.14.0"), "missing pinned Mermaid version");
+		assert.ok(html.includes("mermaid@" + MERMAID_VERSION), "missing pinned Mermaid version");
 	});
 
 	it("replaces all placeholders when slides are present", () => {
@@ -423,9 +384,9 @@ describe("getWebviewContent", () => {
 
 	it("injects no custom CSS when all settings are at defaults", () => {
 		const html = getWebviewContent(["# Hello"], nonce, defaultSettings);
-		const stylesMatch = html.match(/\/\* custom \*\/([\s\S]*?)<\/style>/);
-		const injected = stylesMatch ? stylesMatch[1].trim() : "";
-		assert.equal(injected, "", "expected empty custom styles block");
+		const stylesMatch = html.match(/User-configurable style overrides \*\/([\s\S]*?)<\/style>/);
+		assert.ok(stylesMatch, "custom style marker not found in generated page");
+		assert.equal(stylesMatch[1].trim(), "", "expected empty custom styles block");
 	});
 
 	it("injects heading alignment CSS for non-default headingAlignment", () => {
@@ -478,5 +439,112 @@ describe("getWebviewContent", () => {
 	it("adds hide-nav body class when showNavigationArrows is false", () => {
 		const html = getWebviewContent(["# Slide"], nonce, { ...defaultSettings, showNavigationArrows: false });
 		assert.ok(html.includes("hide-nav"), "missing hide-nav class");
+	});
+});
+
+describe("extractMermaidBlocks ordering", () => {
+	it("keeps document order when both fence syntaxes are mixed", () => {
+		const input = "::: mermaid\nfirst\n:::\n\n```mermaid\nsecond\n```\n\n::: mermaid\nthird\n:::\n";
+		assert.deepEqual(extractMermaidBlocks(input), ["first", "second", "third"]);
+	});
+});
+
+describe("resolveSettings validation", () => {
+	it("falls back to defaults for values outside the allowed options", () => {
+		resetConfig();
+		configValues["slide.headingAlignment"] = "justify; } body { display: none";
+		configValues["slide.contentAlignment"] = 7;
+		configValues["slide.fontSize"] = "huge";
+		configValues["slide.mermaidTheme"] = "'); alert(1); ('";
+		const s = resolveSettings();
+		assert.equal(s.headingAlignment, "left");
+		assert.equal(s.contentAlignment, "left");
+		assert.equal(s.fontSize, "medium");
+		assert.equal(s.mermaidTheme, "default");
+	});
+
+	it("accepts hex, named, and functional CSS colors", () => {
+		for (const color of ["#1e1e1e", "#FFF", "red", "rgba(0, 0, 0, 0.8)", "hsl(210 40% 20%)"]) {
+			resetConfig();
+			configValues["slide.backgroundColor"] = color;
+			assert.equal(resolveSettings().backgroundColor, color, color);
+		}
+	});
+
+	it("rejects background values that could end the declaration or load resources", () => {
+		for (const bad of [
+			"red; } body { display: none",
+			"url(https://example.com/t.png)",
+			"red /* x */",
+			"var(--x)",
+			"#fff;",
+			42,
+		]) {
+			resetConfig();
+			configValues["slide.backgroundColor"] = bad;
+			assert.equal(resolveSettings().backgroundColor, "", String(bad));
+		}
+	});
+});
+
+describe("getWebviewContent template safety", () => {
+	const settings = {
+		mermaidTheme: "default",
+		showCounter: true,
+		showNavigationArrows: true,
+		headingAlignment: "center",
+		contentAlignment: "left",
+		fontSize: "medium",
+		backgroundColor: "",
+	};
+
+	it("inserts slide text verbatim even when it contains String.replace patterns", () => {
+		const text = "price $& then $' and $` and $$ done";
+		const html = getWebviewContent([text], "n0nce", settings);
+		assert.ok(html.includes(JSON.stringify(text)), "slide text was altered by replacement patterns");
+	});
+
+	it("does not expand placeholders that appear inside slide text", () => {
+		const text = "see {{CUSTOM_STYLES}} and {{BODY_CLASSES}} and {{NONCE}}";
+		const html = getWebviewContent([text], "n0nce", settings);
+		assert.ok(html.includes(JSON.stringify(text)), "placeholder inside slide text was substituted");
+	});
+
+	it("escapes < in the document key", () => {
+		const html = getWebviewContent(["# x"], "n0nce", settings, "file:///a</script>.md");
+		assert.ok(!html.includes("a</script>.md"));
+		assert.ok(html.includes("a\\u003c/script>.md"));
+	});
+
+	it("scopes script-src to the pinned Mermaid directory, not all of jsDelivr", () => {
+		const html = getWebviewContent(["# x"], "n0nce", settings);
+		const csp = html.match(/Content-Security-Policy" content="([^"]*)"/);
+		assert.ok(csp, "CSP meta tag missing");
+		assert.ok(
+			csp[1].includes(`script-src 'nonce-n0nce' https://cdn.jsdelivr.net/npm/mermaid@${MERMAID_VERSION}/dist/;`),
+			csp[1]
+		);
+		assert.ok(csp[1].includes("default-src 'none'"));
+		assert.ok(csp[1].includes("base-uri 'none'"));
+		assert.ok(csp[1].includes("form-action 'none'"));
+		assert.ok(!/unsafe-eval/.test(csp[1]));
+	});
+
+	it("loads Mermaid from an exact x.y.z version", () => {
+		assert.match(MERMAID_VERSION, /^\d+\.\d+\.\d+$/);
+	});
+
+	it("does not set Mermaid securityLevel, leaving the library default", () => {
+		const html = getWebviewContent(["# x"], "n0nce", settings);
+		assert.ok(!/securityLevel/.test(html));
+	});
+
+	it("loads Mermaid with a dynamic import so a failed load disables diagrams only", () => {
+		const html = getWebviewContent(["# x"], "n0nce", settings);
+		assert.ok(
+			!/^\s*import\s+\w+\s+from/m.test(html),
+			"static import would stop all slides when the CDN is unreachable"
+		);
+		assert.ok(html.includes('import("https://cdn.jsdelivr.net/npm/mermaid@'));
 	});
 });

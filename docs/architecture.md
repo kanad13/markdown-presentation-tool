@@ -149,7 +149,7 @@ The manifest declares support for untrusted workspaces, so the extension stays e
 | :--------------------------- | :-------------------------------------------------------------------------------------------- |
 | `src/extension.js`           | Activation, extraction, settings, template building, panel lifecycle                          |
 | `src/webview.html`           | Renderer, Mermaid loader, navigation, styles                                                  |
-| `test/*.test.js`             | Unit, lifecycle, renderer, and package tests                                                  |
+| `test/*.test.js`             | Unit, lifecycle, renderer, package, and documentation tests                                   |
 | `test/support/vscode-stub.js`| Shared fake of the `vscode` module                                                            |
 | `scripts/render-harness.js`  | Local page server for browser checks                                                          |
 | `examples/`                  | Decks for manual and harness checks                                                           |

@@ -126,4 +126,5 @@ Open VS Code Settings (`Cmd+,` or `Ctrl+,`) and search for **Markdown Presentati
 - **Verify a change:** [docs/testing.md](docs/testing.md) maps each workflow to its checks.
 - **Keep dependencies current:** [docs/dependencies.md](docs/dependencies.md) holds the version and support policy.
 - **Review deferred ideas:** [docs/decisions.md](docs/decisions.md) lists features that are intentionally not built, with the conditions that would reopen them.
+- **Pick a task procedure:** [docs/workflows.md](docs/workflows.md) maps each kind of request to its steps and stopping point.
 - **Report an issue:** use the [issue tracker](https://github.com/kanad13/markdown-presentation-tool/issues).

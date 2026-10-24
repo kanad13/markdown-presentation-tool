@@ -302,9 +302,11 @@ function getWebviewContent(slides, nonce, settings) {
 		slides.length === 1 ? "single-slide" : "",
 		settings.showCounter ? "" : "hide-counter",
 		settings.showNavigationArrows ? "" : "hide-nav",
-	].filter(Boolean).join(" ");
+	]
+		.filter(Boolean)
+		.join(" ");
 
-	const fontSizeMap = /** @type {Record<string, string>} */({ small: "0.85em", medium: "1em", large: "1.25em" });
+	const fontSizeMap = /** @type {Record<string, string>} */ ({ small: "0.85em", medium: "1em", large: "1.25em" });
 	const customStyleRules = [];
 	if (settings.headingAlignment !== "left") {
 		customStyleRules.push(`.slide-inner h1, .slide-inner h2, .slide-inner h3,
@@ -339,7 +341,7 @@ function getWebviewContent(slides, nonce, settings) {
 function postSlidesUpdate(panel, slides) {
 	panel.webview.postMessage({
 		type: "update",
-		slides: slides
+		slides: slides,
 	});
 }
 
@@ -363,97 +365,80 @@ function activate(context) {
 	/** @type {ReturnType<typeof setTimeout> | undefined} */
 	let debounceTimer = undefined;
 
-	const disposable = vscode.commands.registerCommand(
-		"markdownPresentation.showPreview",
-		function () {
-			const editor = vscode.window.activeTextEditor;
-			if (!editor) {
-				vscode.window.showErrorMessage("No active editor");
-				return;
-			}
-
-			const doc = editor.document;
-			if (doc.languageId !== "markdown") {
-				vscode.window.showErrorMessage("Not a Markdown file");
-				return;
-			}
-
-			const slides = getSlides(doc.getText());
-			const settings = resolveSettings();
-			const nonce = getNonce();
-
-			if (currentPanel) {
-				currentPanel.reveal(vscode.ViewColumn.Beside);
-				currentDocument = doc;
-				currentPanel.webview.html = getWebviewContent(slides, nonce, settings);
-			} else {
-				currentPanel = vscode.window.createWebviewPanel(
-					"markdownPresentation",
-					"Markdown Presentation",
-					vscode.ViewColumn.Beside,
-					{ enableScripts: true }
-				);
-
-				currentDocument = doc;
-				currentPanel.webview.html = getWebviewContent(slides, nonce, settings);
-
-				currentPanel.onDidDispose(
-					() => {
-						currentPanel = undefined;
-						currentDocument = undefined;
-					},
-					null,
-					context.subscriptions
-				);
-			}
+	const disposable = vscode.commands.registerCommand("markdownPresentation.showPreview", function () {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) {
+			vscode.window.showErrorMessage("No active editor");
+			return;
 		}
-	);
+
+		const doc = editor.document;
+		if (doc.languageId !== "markdown") {
+			vscode.window.showErrorMessage("Not a Markdown file");
+			return;
+		}
+
+		const slides = getSlides(doc.getText());
+		const settings = resolveSettings();
+		const nonce = getNonce();
+
+		if (currentPanel) {
+			currentPanel.reveal(vscode.ViewColumn.Beside);
+			currentDocument = doc;
+			currentPanel.webview.html = getWebviewContent(slides, nonce, settings);
+		} else {
+			currentPanel = vscode.window.createWebviewPanel(
+				"markdownPresentation",
+				"Markdown Presentation",
+				vscode.ViewColumn.Beside,
+				{ enableScripts: true }
+			);
+
+			currentDocument = doc;
+			currentPanel.webview.html = getWebviewContent(slides, nonce, settings);
+
+			currentPanel.onDidDispose(
+				() => {
+					currentPanel = undefined;
+					currentDocument = undefined;
+				},
+				null,
+				context.subscriptions
+			);
+		}
+	});
 
 	// Live-update preview when source file changes (debounced)
-	const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument(
-		(e) => {
-			if (
-				currentPanel &&
-				currentDocument &&
-				e.document.uri.toString() === currentDocument.uri.toString()
-			) {
-				const panel = currentPanel;
-				clearTimeout(debounceTimer);
-				debounceTimer = setTimeout(() => {
-					const slides = getSlides(e.document.getText());
-					postSlidesUpdate(panel, slides);
-				}, 300);
-			}
+	const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument((e) => {
+		if (currentPanel && currentDocument && e.document.uri.toString() === currentDocument.uri.toString()) {
+			const panel = currentPanel;
+			clearTimeout(debounceTimer);
+			debounceTimer = setTimeout(() => {
+				const slides = getSlides(e.document.getText());
+				postSlidesUpdate(panel, slides);
+			}, 300);
 		}
-	);
+	});
 
 	// Re-render webview when any Markdown Presentation setting changes
-	const changeConfigSubscription = vscode.workspace.onDidChangeConfiguration(
-		(e) => {
-			if (
-				e.affectsConfiguration("markdownPresentation") &&
-				currentPanel &&
-				currentDocument
-			) {
-				const settings = resolveSettings();
-				const nonce = getNonce();
-				const slides = getSlides(currentDocument.getText());
-				currentPanel.webview.html = getWebviewContent(slides, nonce, settings);
-			}
+	const changeConfigSubscription = vscode.workspace.onDidChangeConfiguration((e) => {
+		if (e.affectsConfiguration("markdownPresentation") && currentPanel && currentDocument) {
+			const settings = resolveSettings();
+			const nonce = getNonce();
+			const slides = getSlides(currentDocument.getText());
+			currentPanel.webview.html = getWebviewContent(slides, nonce, settings);
 		}
-	);
+	});
 
 	// Re-render when VS Code color theme changes (affects auto-detected Mermaid theme)
-	const changeColorThemeSubscription = vscode.window.onDidChangeActiveColorTheme(
-		() => {
-			if (currentPanel && currentDocument) {
-				const settings = resolveSettings();
-				const nonce = getNonce();
-				const slides = getSlides(currentDocument.getText());
-				currentPanel.webview.html = getWebviewContent(slides, nonce, settings);
-			}
+	const changeColorThemeSubscription = vscode.window.onDidChangeActiveColorTheme(() => {
+		if (currentPanel && currentDocument) {
+			const settings = resolveSettings();
+			const nonce = getNonce();
+			const slides = getSlides(currentDocument.getText());
+			currentPanel.webview.html = getWebviewContent(slides, nonce, settings);
 		}
-	);
+	});
 
 	context.subscriptions.push(disposable);
 	context.subscriptions.push(changeDocumentSubscription);

@@ -1,0 +1,14 @@
+node_modules/
+package-lock.json
+*.vsix
+assets/
+.vscode-test/
+# HTML template with embedded scripts and {{placeholders}}; a formatter would rewrite it without benefit.
+src/webview.html
+# Markdown is formatted by hand (tables, progressive structure).
+*.md
+# Workflow and editor configuration is maintained by hand.
+.github/
+.vscode/
+.devcontainer/
+.claude/

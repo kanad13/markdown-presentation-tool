@@ -14,26 +14,38 @@ Module._resolveFilename = function (/** @type {string} */ request, /** @type {an
 	return originalResolve.call(this, request, ...args);
 };
 /** @type {any} */ (require.cache)["vscode"] = {
-	id: "vscode", filename: "vscode", loaded: true,
+	id: "vscode",
+	filename: "vscode",
+	loaded: true,
 	exports: {
 		workspace: {
 			getConfiguration: () => ({
-				get: (/** @type {string} */ key, /** @type {unknown} */ defaultValue) => (key in configValues ? configValues[key] : defaultValue),
+				get: (/** @type {string} */ key, /** @type {unknown} */ defaultValue) =>
+					key in configValues ? configValues[key] : defaultValue,
 			}),
 			onDidChangeTextDocument: () => ({ dispose() {} }),
 			onDidChangeConfiguration: () => ({ dispose() {} }),
 		},
 		window: {
-			get activeColorTheme() { return { kind: colorThemeState.kind }; },
+			get activeColorTheme() {
+				return { kind: colorThemeState.kind };
+			},
 			onDidChangeActiveColorTheme: () => ({ dispose() {} }),
 		},
 		commands: { registerCommand: () => ({ dispose() {} }) },
 		ColorThemeKind: { Light: 1, Dark: 2, HighContrast: 3 },
 		ViewColumn: { Beside: 2 },
-	}
+	},
 };
 
-const { extractMermaidBlocks, hasSlideDelimiter, splitSlides, getSlides, resolveSettings, getWebviewContent } = require("../src/extension");
+const {
+	extractMermaidBlocks,
+	hasSlideDelimiter,
+	splitSlides,
+	getSlides,
+	resolveSettings,
+	getWebviewContent,
+} = require("../src/extension");
 
 function resetConfig() {
 	for (const k of Object.keys(configValues)) delete configValues[k];
@@ -41,7 +53,6 @@ function resetConfig() {
 }
 
 describe("extractMermaidBlocks", () => {
-
 	it("extracts a single backtick-fenced mermaid block", () => {
 		const input = "# Title\n\n```mermaid\ngraph TD\n  A --> B\n```\n";
 		const result = extractMermaidBlocks(input);
@@ -50,7 +61,8 @@ describe("extractMermaidBlocks", () => {
 	});
 
 	it("extracts multiple backtick-fenced blocks", () => {
-		const input = "```mermaid\ngraph TD\n  A --> B\n```\n\nSome text\n\n```mermaid\nsequenceDiagram\n  Alice->>Bob: Hi\n```\n";
+		const input =
+			"```mermaid\ngraph TD\n  A --> B\n```\n\nSome text\n\n```mermaid\nsequenceDiagram\n  Alice->>Bob: Hi\n```\n";
 		const result = extractMermaidBlocks(input);
 		assert.equal(result.length, 2);
 		assert.match(result[0], /graph TD/);
@@ -111,7 +123,6 @@ describe("extractMermaidBlocks", () => {
 });
 
 describe("splitSlides (explicit open/close tags)", () => {
-
 	it("extracts content between a single open/close pair", () => {
 		const input = "<!-- slide -->\n# Slide 1\nContent here\n<!-- /slide -->";
 		const result = splitSlides(input);
@@ -129,7 +140,8 @@ describe("splitSlides (explicit open/close tags)", () => {
 	});
 
 	it("discards content outside pairs (preamble, gaps, trailing)", () => {
-		const input = "# Preamble\n<!-- slide -->\n# Slide 1\n<!-- /slide -->\nGap text\n<!-- slide -->\n# Slide 2\n<!-- /slide -->\nTrailing";
+		const input =
+			"# Preamble\n<!-- slide -->\n# Slide 1\n<!-- /slide -->\nGap text\n<!-- slide -->\n# Slide 2\n<!-- /slide -->\nTrailing";
 		const result = splitSlides(input);
 		assert.equal(result.length, 2);
 		assert.match(result[0], /Slide 1/);
@@ -154,7 +166,8 @@ describe("splitSlides (explicit open/close tags)", () => {
 	});
 
 	it("ignores delimiters inside fenced code block", () => {
-		const input = "<!-- slide -->\n# Slide 1\n```js\n<!-- /slide -->\n```\n<!-- /slide -->\n<!-- slide -->\n# Slide 2\n<!-- /slide -->";
+		const input =
+			"<!-- slide -->\n# Slide 1\n```js\n<!-- /slide -->\n```\n<!-- /slide -->\n<!-- slide -->\n# Slide 2\n<!-- /slide -->";
 		const result = splitSlides(input);
 		assert.equal(result.length, 2);
 		assert.match(result[0], /Slide 1/);
@@ -162,7 +175,8 @@ describe("splitSlides (explicit open/close tags)", () => {
 	});
 
 	it("ignores delimiters inside ::: mermaid block", () => {
-		const input = "<!-- slide -->\n# Slide 1\n::: mermaid\ngraph TD\n  A-->B\n<!-- /slide -->\n:::\n<!-- /slide -->";
+		const input =
+			"<!-- slide -->\n# Slide 1\n::: mermaid\ngraph TD\n  A-->B\n<!-- /slide -->\n:::\n<!-- /slide -->";
 		const result = splitSlides(input);
 		assert.equal(result.length, 1);
 		assert.match(result[0], /Slide 1/);
@@ -202,7 +216,8 @@ describe("splitSlides (explicit open/close tags)", () => {
 	});
 
 	it("skips YAML front matter at start of file", () => {
-		const input = "---\ntitle: My Notes\ndate: 2024-01-01\n---\n# Preamble\n<!-- slide -->\n# Slide 1\n<!-- /slide -->";
+		const input =
+			"---\ntitle: My Notes\ndate: 2024-01-01\n---\n# Preamble\n<!-- slide -->\n# Slide 1\n<!-- /slide -->";
 		const result = splitSlides(input);
 		assert.equal(result.length, 1);
 		assert.match(result[0], /Slide 1/);
@@ -217,11 +232,9 @@ describe("splitSlides (explicit open/close tags)", () => {
 		assert.match(result[0], /Slide 1/);
 		assert.match(result[0], /More content/);
 	});
-
 });
 
 describe("hasSlideDelimiter", () => {
-
 	it("detects <!-- slide --> in a document", () => {
 		assert.equal(hasSlideDelimiter("# Title\n<!-- slide -->\n## Slide 2"), true);
 	});
@@ -246,13 +259,12 @@ describe("hasSlideDelimiter", () => {
 		// inline comment should not trigger slide mode
 		assert.equal(hasSlideDelimiter("some <!-- slide --> inline text"), false);
 	});
-
 });
 
 describe("getSlides", () => {
-
 	it("classic mode: returns one slide per mermaid block when no delimiter", () => {
-		const input = "# Heading\n```mermaid\ngraph TD\n  A-->B\n```\ntext\n```mermaid\nsequenceDiagram\n  A->>B: Hi\n```";
+		const input =
+			"# Heading\n```mermaid\ngraph TD\n  A-->B\n```\ntext\n```mermaid\nsequenceDiagram\n  A->>B: Hi\n```";
 		const result = getSlides(input);
 		assert.equal(result.length, 2);
 		// Each slide should be a mermaid-fence-wrapped string
@@ -266,7 +278,8 @@ describe("getSlides", () => {
 	});
 
 	it("slide mode: extracts explicitly closed slides", () => {
-		const input = "# Preamble\n<!-- slide -->\n# Slide 1\n```mermaid\ngraph TD\n  A-->B\n```\n<!-- /slide -->\nGap\n<!-- slide -->\n# Slide 2\nParagraph\n<!-- /slide -->";
+		const input =
+			"# Preamble\n<!-- slide -->\n# Slide 1\n```mermaid\ngraph TD\n  A-->B\n```\n<!-- /slide -->\nGap\n<!-- slide -->\n# Slide 2\nParagraph\n<!-- /slide -->";
 		const result = getSlides(input);
 		assert.equal(result.length, 2);
 		assert.match(result[0], /Slide 1/);
@@ -274,7 +287,8 @@ describe("getSlides", () => {
 	});
 
 	it("slide mode: discards content outside pairs", () => {
-		const input = "<!-- slide -->\n# Title\nSome text.\n<!-- /slide -->\nIgnored gap.\n<!-- slide -->\n## Second\nMore text.\n<!-- /slide -->";
+		const input =
+			"<!-- slide -->\n# Title\nSome text.\n<!-- /slide -->\nIgnored gap.\n<!-- slide -->\n## Second\nMore text.\n<!-- /slide -->";
 		const result = getSlides(input);
 		assert.equal(result.length, 2);
 		assert.match(result[0], /Some text/);
@@ -283,7 +297,8 @@ describe("getSlides", () => {
 	});
 
 	it("slide mode: preserves mermaid-only slides", () => {
-		const input = "<!-- slide -->\n# Intro\n<!-- /slide -->\n<!-- slide -->\n```mermaid\ngraph TD\n  A-->B\n```\n<!-- /slide -->";
+		const input =
+			"<!-- slide -->\n# Intro\n<!-- /slide -->\n<!-- slide -->\n```mermaid\ngraph TD\n  A-->B\n```\n<!-- /slide -->";
 		const result = getSlides(input);
 		assert.equal(result.length, 2);
 		assert.match(result[1], /graph TD/);
@@ -304,11 +319,9 @@ describe("getSlides", () => {
 		assert.match(result[0], /Intro/);
 		assert.match(result[0], /Still same slide/);
 	});
-
 });
 
 describe("resolveSettings", () => {
-
 	it("returns defaults when no config is set (Light theme)", () => {
 		resetConfig();
 		colorThemeState.kind = 1; // Light
@@ -373,12 +386,18 @@ describe("resolveSettings", () => {
 		configValues["slide.fontSize"] = "small";
 		assert.equal(resolveSettings().fontSize, "small");
 	});
-
 });
 
 describe("getWebviewContent", () => {
-
-	const defaultSettings = { mermaidTheme: "default", showCounter: true, showNavigationArrows: true, headingAlignment: "left", contentAlignment: "left", fontSize: "medium", backgroundColor: "" };
+	const defaultSettings = {
+		mermaidTheme: "default",
+		showCounter: true,
+		showNavigationArrows: true,
+		headingAlignment: "left",
+		contentAlignment: "left",
+		fontSize: "medium",
+		backgroundColor: "",
+	};
 	const nonce = "testnonce123";
 
 	it("returns empty-state HTML with 'No slides found' heading when slides array is empty", () => {
@@ -460,5 +479,4 @@ describe("getWebviewContent", () => {
 		const html = getWebviewContent(["# Slide"], nonce, { ...defaultSettings, showNavigationArrows: false });
 		assert.ok(html.includes("hide-nav"), "missing hide-nav class");
 	});
-
 });

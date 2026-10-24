@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2026-10-24
+
+### Added
+- The slide position is kept when you switch editor tabs or change a setting.
+
+### Changed
+- Diagrams render with Mermaid 12. Mermaid 12 uses a new default layout and look, so flowcharts and similar diagrams route edges differently and use new default styling.
+- The extension installs on VS Code 1.105 and later (the minimum was 1.109).
+- Mermaid runs at its default `strict` security level, so `click` interactions and raw HTML inside diagram labels are disabled.
+- Invalid values for the alignment, font size, Mermaid theme, and background color settings are ignored and the default applies.
+
+### Fixed
+- Text slides, navigation, and live update work when Mermaid cannot be loaded (offline or blocked network). Each diagram slide shows a note and the diagram source.
+- One diagram with a syntax error no longer replaces the whole slide. Other diagrams on the slide still render.
+- Edits made while the presentation tab was hidden appear when you return to it.
+- Slide text that contains `$&`, `$'`, `$$`, or placeholder-like text such as `{{BODY_CLASSES}}` is shown unchanged.
+- Words with underscores, such as `my_var_name`, are no longer shown in italics. Bold and italic marks inside inline code stay literal, and `2 * 3 * 4` is no longer italicized.
+- Files that mix backtick and `:::` Mermaid fences show the diagrams in document order.
+
+### Security
+- The page allows scripts only from the pinned Mermaid directory on the CDN, and blocks `base` tags and form posts.
+- Setting values are checked before they are used in slide styles.
+
 ## [2.0.0] - 2026-04-29
 
 ### Breaking Changes

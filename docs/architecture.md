@@ -109,6 +109,10 @@ The nonce comes from `crypto.randomBytes` and changes on every render.
 2. Allow-lists check enumerated values (`pickOption`) and the background color (`sanitizeColor`). A rejected value becomes the default. VS Code does not enforce manifest enums on hand-edited values, and workspace settings come from the opened folder.
 3. `getWebviewContent()` turns non-default values into a small CSS block. Default settings produce no extra CSS.
 
+## Workspace Trust
+
+The manifest declares support for untrusted workspaces, so the extension stays enabled in Restricted Mode. It runs no code from the opened folder. Slide text is escaped, and workspace setting values pass the allow-lists described above, so a hostile folder cannot change the page's script or fetch resources through CSS.
+
 ## Panel lifecycle
 
 `activate()` keeps one panel and the document it shows in closure variables.

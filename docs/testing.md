@@ -30,6 +30,7 @@ Each row names a workflow a user performs, the evidence that protects it, and an
 | Close the panel or deactivate mid-edit     | `test/lifecycle.test.js`: pending timer cancelled, no post to a disposed panel                                    | None                                            |
 | Switch tabs while editing                  | `test/lifecycle.test.js`: hidden panel is not messaged and re-renders on becoming visible                         | Real tab restore behavior (manual)              |
 | Change a setting or theme                  | `test/lifecycle.test.js`: re-render with new CSS and Mermaid theme                                                | Visual result (harness)                         |
+| Open an untrusted folder                   | `test/package.test.js`: the manifest declares untrusted-workspace support                                         | Restricted Mode behavior in a real editor (manual) |
 | Hostile setting values                     | `test/extension.test.js`: allow-lists and the color sanitizer                                                     | None                                            |
 | Hostile slide text                         | `test/webview.test.js` (escaping), `test/extension.test.js` (placeholders and `$` patterns, `<` in JSON)          | None                                            |
 | Read rendered Markdown                     | `test/webview.test.js` runs the shipped renderer block                                                            | Visual styling (harness)                        |
@@ -88,7 +89,8 @@ Run this before each release, on the package built from the final commit.
 6. Change the `markdownPresentation.slide.fontSize` setting while on a later slide and confirm that the slide index stays the same.
 7. Switch the VS Code color theme between light and dark and confirm that the diagram theme follows.
 8. Set `markdownPresentation.slide.backgroundColor` to `#102040` and confirm the slide background changes. Set it to an invalid value and confirm the editor background returns.
-9. Run `code --uninstall-extension KunalPathak.markdown-presentation-tool`.
+9. Open the repository folder in Restricted Mode (choose "No, I don't trust the authors") and confirm that **Markdown: Show Markdown Presentation** is available.
+10. Run `code --uninstall-extension KunalPathak.markdown-presentation-tool`.
 
 ## Triggers
 

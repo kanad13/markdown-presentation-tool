@@ -113,6 +113,8 @@ Open VS Code Settings (`Cmd+,` or `Ctrl+,`) and search for **Markdown Presentati
   - Document text is escaped before it enters the slide page.
   - The page runs under a strict Content Security Policy that allows only its own script and the pinned Mermaid directory.
   - Mermaid runs at its default `strict` security level.
+- **Restricted Mode:**
+  - The extension stays enabled in VS Code's Restricted Mode (untrusted folders), because it executes nothing from the folder.
 - **Settings input:**
   - The extension accepts only known values for enumerated settings and a plain CSS color for the background.
   - It ignores any other value.

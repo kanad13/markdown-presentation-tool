@@ -20,7 +20,7 @@ Related guides: [architecture.md](architecture.md) for the design these decision
 
 | Idea                                    | Verdict            | Reopen when                                                     |
 | :-------------------------------------- | :----------------- | :-------------------------------------------------------------- |
-| Workspace Trust declaration             | Scoped pursue      | The maintainer confirms the supported audience                  |
+| Engine floor held above the policy value | Maintainer decision | The maintainer asks to follow the 12-month rule                |
 | Links in slide text                     | Defer              | A maintainer or user asks for clickable links                   |
 | Tables                                  | Scoped pursue      | Users report tables as the top gap                              |
 | Nested lists and task lists             | Defer              | A user deck needs a second list level                           |
@@ -34,18 +34,16 @@ Related guides: [architecture.md](architecture.md) for the design these decision
 
 ## Entries
 
-### Workspace Trust declaration
+### Engine floor held above the policy value
 
 - **What it is:**
-  - VS Code opens unfamiliar folders in Restricted Mode. An extension that does not declare support for that mode is disabled there, so the presentation button disappears until the user trusts the folder.
-  - The `capabilities.untrustedWorkspaces` field in `package.json` can declare that the extension is safe in Restricted Mode.
-- **Why it is not done:**
-  - Declaring support changes who can use the extension in which state. That decision belongs to the maintainer.
-- **Why it is probably safe:**
-  - The extension runs no code from the opened folder. Slide text is escaped, and setting values pass allow-lists, so a hostile workspace settings file cannot change the page's script or fetch resources through CSS.
-  - The one outbound path is image and Mermaid loading, which happens in trusted and untrusted folders alike.
+  - The support policy in [dependencies.md](dependencies.md) sets the editor floor to the newest release that is at least 12 months old. The manifest holds the floor at an older maintainer-chosen release that sits above that value.
+- **Why it stays:**
+  - The maintainer chose to keep the existing floor and not widen the supported audience in this release.
+- **What it costs:**
+  - Users on editor releases between the policy value and the floor cannot install the extension.
 - **Reopen when:**
-  - The maintainer confirms the audience. The change is one manifest field plus a testing-guide row.
+  - The maintainer asks to follow the 12-month rule, or a user on an older editor asks for support. Move `engines.vscode` and the `@types/vscode` pin together.
 
 ### Links in slide text
 

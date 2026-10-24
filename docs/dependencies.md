@@ -55,6 +55,7 @@ Two further rules bind how a version is written.
   - The engine floor is the newest editor release that is at least 12 months old.
 - **Floor changes:**
   - Move the engine floor and the exact `@types/vscode` pin together, at each quarterly review.
+  - A maintainer decision can hold the floor above this value. [decisions.md](decisions.md) records any such hold.
   - `test/package.test.js` fails when the two disagree.
 - **Forks:**
   - Before raising the floor, check the base editor version of every fork the README advertises. A floor above a fork's base blocks installation there.

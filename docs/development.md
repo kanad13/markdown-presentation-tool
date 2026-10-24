@@ -129,7 +129,8 @@ List user-facing changes only.
 
 ### Step 4: Validate store constraints
 
-- The icon is at least 128x128 pixels. The manifest reference documents that minimum and recommends 256x256. It documents no maximum, so confirm the icon file is the one the previous release shipped or check the listing after publishing.
+- The icon is a 256x256 PNG. The manifest reference documents a 128x128 minimum and recommends 256x256.
+- The manifest declares `capabilities.untrustedWorkspaces.supported`. `test/package.test.js` checks it.
 - `npx vsce ls` lists no development files. `test/package.test.js` checks this on every run.
 - `engines.vscode` and the `@types/vscode` pin agree. `test/package.test.js` checks this too.
 

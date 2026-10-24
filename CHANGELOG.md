@@ -5,15 +5,16 @@ All notable changes to this project will be documented in this file.
 ## [2.1.0] - 2026-10-24
 
 ### Added
+- The extension works in Restricted Mode (untrusted workspaces).
 - The slide position is kept when you switch editor tabs or change a setting.
 
 ### Changed
 - Diagrams render with Mermaid 12. Mermaid 12 uses a new default layout and look, so flowcharts and similar diagrams route edges differently and use new default styling.
-- The extension installs on VS Code 1.105 and later (the minimum was 1.109).
 - Mermaid runs at its default `strict` security level, so `click` interactions and raw HTML inside diagram labels are disabled.
 - Invalid values for the alignment, font size, Mermaid theme, and background color settings are ignored and the default applies.
 
 ### Fixed
+- The Marketplace icon is 256x256 pixels, the size VS Code recommends, instead of 1275x1275.
 - Text slides, navigation, and live update work when Mermaid cannot be loaded (offline or blocked network). Each diagram slide shows a note and the diagram source.
 - One diagram with a syntax error no longer replaces the whole slide. Other diagrams on the slide still render.
 - Edits made while the presentation tab was hidden appear when you return to it.

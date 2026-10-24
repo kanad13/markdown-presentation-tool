@@ -6,7 +6,7 @@ const path = require("path");
 // Single source of truth for the runtime-loaded Mermaid version. An exact x.y.z
 // keeps rendering stable between extension releases; the CSP script-src below
 // is scoped to this directory so no other jsDelivr package can execute.
-const MERMAID_VERSION = "11.14.0";
+const MERMAID_VERSION = "12.1.0";
 const MERMAID_BASE_URL = `https://cdn.jsdelivr.net/npm/mermaid@${MERMAID_VERSION}/dist/`;
 const MERMAID_MODULE_URL = MERMAID_BASE_URL + "mermaid.esm.min.mjs";
 

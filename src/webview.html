@@ -354,10 +354,17 @@
 		let mermaidPromise;
 		function loadMermaid() {
 			if (!mermaidPromise) {
-				mermaidPromise = import({{MERMAID_MODULE_URL_JSON}}).then((mod) => {
-					mod.default.initialize({ startOnLoad: false, theme: '{{THEME}}' });
-					return mod.default;
-				});
+				mermaidPromise = import({{MERMAID_MODULE_URL_JSON}}).then(
+					(mod) => {
+						mod.default.initialize({ startOnLoad: false, theme: '{{THEME}}' });
+						return mod.default;
+					},
+					(error) => {
+						// A cached rejection would fail every later slide; retry on the next slide.
+						mermaidPromise = undefined;
+						throw error;
+					}
+				);
 			}
 			return mermaidPromise;
 		}

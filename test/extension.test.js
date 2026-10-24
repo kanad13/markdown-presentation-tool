@@ -534,6 +534,11 @@ describe("getWebviewContent template safety", () => {
 		assert.match(MERMAID_VERSION, /^\d+\.\d+\.\d+$/);
 	});
 
+	it("clears the cached Mermaid load after a failure so a later slide can retry", () => {
+		const html = getWebviewContent(["# x"], "n0nce", settings);
+		assert.match(html, /\(error\) => \{[^}]*mermaidPromise = undefined;[^}]*throw error;/);
+	});
+
 	it("does not set Mermaid securityLevel, leaving the library default", () => {
 		const html = getWebviewContent(["# x"], "n0nce", settings);
 		assert.ok(!/securityLevel/.test(html));

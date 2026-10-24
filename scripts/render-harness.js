@@ -14,15 +14,9 @@ const fs = require("fs");
 const http = require("http");
 const path = require("path");
 const { URL } = require("url");
-const Module = /** @type {any} */ (require("module"));
-
-// extension.js requires "vscode" at load time; only the pure functions are used here.
-const originalResolve = Module._resolveFilename;
-Module._resolveFilename = function (/** @type {string} */ request, /** @type {any[]} */ ...args) {
-	if (request === "vscode") return "vscode";
-	return originalResolve.call(this, request, ...args);
-};
-/** @type {any} */ (require.cache)["vscode"] = { id: "vscode", filename: "vscode", loaded: true, exports: {} };
+// extension.js requires "vscode" at load time; the shared test fake satisfies it,
+// and only the pure functions are used here.
+require("../test/support/vscode-stub");
 
 const { getSlides, getWebviewContent, getNonce } = require("../src/extension");
 

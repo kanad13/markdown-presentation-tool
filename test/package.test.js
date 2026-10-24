@@ -49,6 +49,21 @@ describe("manifest policy", () => {
 		assert.equal(manifest.devDependencies["@types/vscode"], floor);
 	});
 
+	it("declares support for untrusted workspaces", () => {
+		// The extension runs no code from the opened folder and validates workspace settings,
+		// so it stays usable in Restricted Mode.
+		assert.deepEqual(manifest.capabilities, { untrustedWorkspaces: { supported: true } });
+	});
+
+	it("ships a square icon of at least 128x128 pixels", () => {
+		// PNG header: 8-byte signature, then the IHDR chunk with width and height at bytes 16 and 20.
+		const png = fs.readFileSync(path.join(root, manifest.icon));
+		const width = png.readUInt32BE(16);
+		const height = png.readUInt32BE(20);
+		assert.equal(width, height);
+		assert.ok(width >= 128, "icon is " + width + "px wide");
+	});
+
 	it("keeps runtime dependencies empty", () => {
 		assert.equal(manifest.dependencies, undefined);
 	});

@@ -11,7 +11,7 @@
 		"url": "https://github.com/kanad13/markdown-presentation-tool/issues"
 	},
 	"engines": {
-		"vscode": "^1.105.0",
+		"vscode": "^1.109.0",
 		"node": ">=22.13.0"
 	},
 	"categories": [
@@ -150,7 +150,7 @@
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
 		"@types/node": "^22.20.5",
-		"@types/vscode": "1.105.0",
+		"@types/vscode": "1.109.0",
 		"@vscode/vsce": "^3.9.2",
 		"eslint": "^10.12.0",
 		"prettier": "^3.9.10"
@@ -160,5 +160,10 @@
 		"url": "https://github.com/kanad13/markdown-presentation-tool.git"
 	},
 	"license": "MIT",
-	"pricing": "Free"
+	"pricing": "Free",
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": true
+		}
+	}
 }

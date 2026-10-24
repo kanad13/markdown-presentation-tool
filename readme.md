@@ -1,62 +1,29 @@
-# Markdown Presentation & Slideshow for VS Code
+# Markdown Presentation Tool for VS Code
 
-**Turn your Markdown files into interactive slide decks instantly.**
+**Present a Markdown file as a slide deck without leaving VS Code.**
 
-**Present your documents directly from VS Code—just like PowerPoint, but powered by the simplicity of plain text.**
-
-[Markdown Presentation Tool](https://marketplace.visualstudio.com/items?itemName=KunalPathak.markdown-presentation-tool) is a lightweight extension designed to present documentation, meeting notes, or architecture diagrams without the friction of external software.
-
-Stop wasting time exporting to PDF or building clunky PPT files. Write your content in Markdown and launch a beautiful, navigable slideshow with a single click.
+[Markdown Presentation Tool](https://marketplace.visualstudio.com/items?itemName=KunalPathak.markdown-presentation-tool) turns the slides you mark in a Markdown file into a navigable slideshow beside your editor. It suits documentation, meeting notes, and architecture diagrams, and it needs no export step. The slides stay in the same plain-text file you already edit, and the slideshow updates as you type.
 
 ![Markdown Presentation Tool](https://raw.githubusercontent.com/kanad13/markdown-presentation-tool/refs/heads/main/assets/extension-demo.gif)
 
-## Key Features
+## Install
 
-- **Native VS Code Integration:** Plugs directly into your existing workflow.
-- **Zero Configuration:** Works just like the built-in Markdown preview. Simply click the presentation icon and go.
-- **Real-Time Live Sync:** Editor changes reflect instantly in the slideshow view.
-- **Full Markdown Support:** Headings, lists, blockquotes, and code blocks render perfectly.
-- **Rich Media & Diagrams:** Full support for Mermaid.js diagrams and remote images.
-- **Customizable Styles:** Control alignment, font size, and background colors to suit your brand.
-- **Theme Awareness:** Automatically syncs with your VS Code theme (Light/Dark) for a seamless look.
-- **Clean Document Structure:** Uses `<!-- slide -->` and `<!-- /slide -->` tags that remain invisible in standard Markdown previews, keeping your source files clean.
+- **From the Marketplace:**
+  - Open the [Markdown Presentation Tool page](https://marketplace.visualstudio.com/items?itemName=KunalPathak.markdown-presentation-tool) and select **Install**.
+  - Or search for "Markdown Presentation Tool" in the VS Code Extensions view.
+- **Requirements:**
+  - The current stable release of VS Code, or any older release back to the `engines.vscode` floor in [package.json](package.json).
+  - Internet access when a slide contains a Mermaid diagram (see [Privacy and security](#privacy-and-security)).
 
-## Getting Started
+## Use
 
-1. **Install** the extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=KunalPathak.markdown-presentation-tool).
-2. **Open** any Markdown (`.md`) file.
-3. **Launch the Presentation:**
-   - Click the **Presentation Icon** in the editor title bar (top right).
-   - **OR** open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and type `Markdown: Show Markdown Presentation`.
+1. **Mark your slides.** Put `<!-- slide -->` on its own line to open a slide and `<!-- /slide -->` on its own line to close it.
+2. **Open the Markdown file** in VS Code.
+3. **Start the presentation** in either of two ways:
+   - Select the **Presentation icon** in the editor title bar.
+   - Open the Command Palette (`Cmd+Shift+P` or `Ctrl+Shift+P`) and run `Markdown: Show Markdown Presentation`.
 
-## Navigation & Controls
-
-
-| Action              | Input                                                            |
-| :------------------ | :--------------------------------------------------------------- |
-| **Next Slide**      | `Right Arrow`, `Down Arrow`, `PageDown`, `Space`, or Scroll Down |
-| **Previous Slide**  | `Left Arrow`, `Up Arrow`, `PageUp`, or Scroll Up                 |
-| **Internal Scroll** | `Shift` + `Scroll` (for long slides)                             |
-| **Visual Navigation**| Interactive arrow overlays on screen edges                       |
-
-## Configuration Reference
-
-Adjust these in VS Code Settings (`Cmd+,` / `Ctrl+,`) under **Markdown Presentation Tool**.
-
-
-| Category       | Setting                                           | Default   | Description                                           |
-| :------------- | :------------------------------------------------ | :-------- | :---------------------------------------------------- |
-| **Mermaid**    | `markdownPresentation.slide.mermaidTheme`         | `default` | `default` (auto), `dark`, `forest`, or `neutral`      |
-| **Appearance** | `markdownPresentation.slide.headingAlignment`     | `left`    | `left`, `center`, or `right`                          |
-| **Appearance** | `markdownPresentation.slide.contentAlignment`     | `left`    | `left`, `center`, or `right`                          |
-| **Appearance** | `markdownPresentation.slide.fontSize`             | `medium`  | `small` (0.85em), `medium` (1em), or `large` (1.25em) |
-| **Appearance** | `markdownPresentation.slide.backgroundColor`      | _(empty)_ | Custom hex code (e.g., `#1e1e1e`)                     |
-| **UI**         | `markdownPresentation.slide.showCounter`          | `true`    | Toggle the slide counter (bottom-right)               |
-| **UI**         | `markdownPresentation.slide.showNavigationArrows` | `true`    | Toggle the on-screen navigation arrows                |
-
-## How to Create Slides
-
-Defining a slide is simple. Use `<!-- slide -->` to open a slide and `<!-- /slide -->` to close it.
+Only text inside an open/close pair becomes a slide. Notes, drafts, and reminders outside the pairs stay in the editor.
 
 ````markdown
 <!-- slide -->
@@ -86,7 +53,75 @@ graph LR
 - Content outside slide tags is not shown during the presentation.
 - Keep speaker notes, prompts, or draft edits in the same file without leaking them onto slides.
 ````
-## Contributing & Support
 
-- **Contributions:** We welcome your help! See our [Development Guide](/docs/development.md) for local setup instructions.
-- **Codebase:** Check out the [Architecture Guide](/docs/architecture.md) to understand the project structure and design.
+A file with no `<!-- slide -->` line shows one slide per Mermaid diagram and ignores the text around the diagrams.
+
+### Navigation
+
+| Action               | Input                                                              |
+| :------------------- | :----------------------------------------------------------------- |
+| **Next slide**       | `Right Arrow`, `Down Arrow`, `PageDown`, `Space`, or scroll down   |
+| **Previous slide**   | `Left Arrow`, `Up Arrow`, `PageUp`, or scroll up                   |
+| **Scroll in a slide**| `Shift` + scroll, for slides taller than the panel                 |
+| **On-screen arrows** | Select the arrows at the panel edges                               |
+
+### Settings
+
+Open VS Code Settings (`Cmd+,` or `Ctrl+,`) and search for **Markdown Presentation Tool**.
+
+| Category       | Setting                                           | Default   | Description                                                  |
+| :------------- | :------------------------------------------------ | :-------- | :----------------------------------------------------------- |
+| **Mermaid**    | `markdownPresentation.slide.mermaidTheme`         | `default` | `default` (follows the VS Code theme), `dark`, `forest`, or `neutral` |
+| **Appearance** | `markdownPresentation.slide.headingAlignment`     | `left`    | `left`, `center`, or `right`                                 |
+| **Appearance** | `markdownPresentation.slide.contentAlignment`     | `left`    | `left`, `center`, or `right`                                 |
+| **Appearance** | `markdownPresentation.slide.fontSize`             | `medium`  | `small` (0.85em), `medium` (1em), or `large` (1.25em)        |
+| **Appearance** | `markdownPresentation.slide.backgroundColor`      | _(empty)_ | A hex, named, or functional CSS color such as `#1e1e1e`; other values are ignored |
+| **UI**         | `markdownPresentation.slide.showCounter`          | `true`    | Show the slide counter in the bottom-right corner            |
+| **UI**         | `markdownPresentation.slide.showNavigationArrows` | `true`    | Show the on-screen navigation arrows                         |
+
+## Features
+
+- **Editor integration:**
+  - The slideshow opens beside your editor and needs no configuration.
+  - Edits to the source file appear in the slideshow while you type.
+  - The slide position survives switching tabs and changing settings.
+- **Markdown rendering:**
+  - Headings, paragraphs, bullet and numbered lists (one level), blockquotes, and horizontal rules.
+  - Bold, italic, inline code, and fenced code blocks.
+  - Images from `https://` addresses, one image per line.
+- **Diagrams:**
+  - Mermaid diagrams render from backtick fences and from Azure DevOps `::: mermaid` fences.
+  - A diagram error or an unreachable network affects that diagram only. Text slides keep working.
+- **Appearance:**
+  - Slides follow your VS Code light or dark theme.
+  - Settings control alignment, font size, background color, and the on-screen controls.
+- **Clean source files:**
+  - The slide tags are HTML comments, so other Markdown previews hide them.
+- **Not supported:**
+  - Tables, clickable links, nested lists, and images from local file paths.
+  - [decisions.md](docs/decisions.md) records why.
+
+## Privacy and security
+
+- **Network use:**
+  - A slide with a Mermaid diagram loads one pinned Mermaid version from `cdn.jsdelivr.net`.
+  - A slide with an `https://` image requests that image from the host in the address.
+  - The extension makes no other network requests and sends no telemetry.
+- **Local access:**
+  - The extension reads the Markdown file you present and your Markdown Presentation settings. It writes no files.
+- **Content handling:**
+  - Document text is escaped before it enters the slide page.
+  - The page runs under a strict Content Security Policy that allows only its own script and the pinned Mermaid directory.
+  - Mermaid runs at its default `strict` security level.
+- **Settings input:**
+  - The extension accepts only known values for enumerated settings and a plain CSS color for the background.
+  - It ignores any other value.
+
+## Contribute
+
+- **Set up and release:** [docs/development.md](docs/development.md) covers local setup, checks, CI, and the release process.
+- **Understand the design:** [docs/architecture.md](docs/architecture.md) explains slide extraction, rendering, and the panel lifecycle.
+- **Verify a change:** [docs/testing.md](docs/testing.md) maps each workflow to its checks.
+- **Keep dependencies current:** [docs/dependencies.md](docs/dependencies.md) holds the version and support policy.
+- **Review deferred ideas:** [docs/decisions.md](docs/decisions.md) lists features that are intentionally not built, with the conditions that would reopen them.
+- **Report an issue:** use the [issue tracker](https://github.com/kanad13/markdown-presentation-tool/issues).

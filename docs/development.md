@@ -1,37 +1,33 @@
 # Development Guide
 
-This is the single source of truth for developing, testing, and releasing the Markdown Presentation Tool. For architecture details, see [architecture.md](architecture.md).
+This guide covers setup, daily checks, continuous integration, and the release process for the Markdown Presentation Tool. Mechanisms are in [architecture.md](architecture.md), verification in [testing.md](testing.md), version policy in [dependencies.md](dependencies.md), and deliberate omissions in [decisions.md](decisions.md). Agents read [AGENTS.md](../AGENTS.md).
 
+## Key source files
 
-## Key Source Files
-
-| File | Purpose |
-| --- | --- |
-| `src/extension.js` | All extension logic: activation, slide extraction, webview panel management |
-| `src/webview.html` | Webview renderer: Markdown-to-HTML, Mermaid via CDN, slide navigation |
-| `test/extension.test.js` | Node.js unit tests |
-| `examples/01-classic-mode.md` | Classic mode test file (no slide delimiters) — one slide per Mermaid diagram, for backward compatibility |
-| `examples/02-slide-mode-basics.md` | Slide mode happy-path examples — text + diagrams, mermaid-only slides, both fence syntaxes |
-| `examples/03-slide-mode-advanced.md` | Slide mode edge cases — preamble, gaps, empty pairs, tall slide with Shift+scroll |
-| `examples/04-demo-script.md` | Recording script / walkthrough content for demos and manual testing |
-
+| File                          | Purpose                                                                        |
+| :---------------------------- | :----------------------------------------------------------------------------- |
+| `src/extension.js`            | All extension logic: activation, slide extraction, settings, panel management  |
+| `src/webview.html`            | Webview template: renderer, Mermaid loader, navigation, styles                 |
+| `test/*.test.js`              | Unit, lifecycle, renderer, and package tests (Node's built-in runner)          |
+| `test/support/vscode-stub.js` | The shared fake of the `vscode` module                                         |
+| `scripts/render-harness.js`   | Local page server for browser checks                                           |
+| `examples/01-classic-mode.md` | Mermaid-only file (no slide delimiters)                                        |
+| `examples/02-slide-mode-basics.md` | Slide mode happy path: text and diagrams, both fence syntaxes            |
+| `examples/03-slide-mode-advanced.md` | Slide mode edge cases: preamble, gaps, empty pairs, a tall slide          |
+| `examples/04-demo-script.md`  | Walkthrough content for demos and manual testing                               |
 
 ## Prerequisites
 
-### Local development
+- **Local development:**
+  - Node.js at the `engines.node` floor in `package.json`, or newer
+  - npm
+  - VS Code
+  - `gh` CLI, to trigger releases from the terminal
+- **Repository secrets:**
+  - `VSCE_PAT`, a Personal Access Token for the Marketplace publisher account, used for manual publishing
+  - `GITHUB_TOKEN`, provided automatically by GitHub Actions
 
-- Node.js 20 (matches CI)
-- npm
-- VS Code
-- `gh` CLI — required to trigger releases from the terminal
-
-### Repository secrets (for release automation)
-
-- `VSCE_PAT` — a Personal Access Token for the VS Code Marketplace publisher account, stored as a GitHub Actions secret under **Settings → Secrets and variables → Actions**
-- Standard `GITHUB_TOKEN` — provided automatically by GitHub Actions; no manual setup needed
-
-
-## Local Setup
+## Local setup
 
 ```bash
 git clone https://github.com/kanad13/markdown-presentation-tool.git
@@ -39,29 +35,25 @@ cd markdown-presentation-tool
 npm ci
 ```
 
+## Daily development
 
-## Daily Development
+### Run the extension locally
 
-### Run the extension locally (F5 debug)
+1. Open the repository in VS Code and press `F5` to start the Extension Development Host.
+2. In the host window, open `examples/02-slide-mode-basics.md`.
+3. Run `Markdown: Show Markdown Presentation` from the Command Palette.
+4. Check slide rendering and navigation.
 
-1. Open the repository in VS Code.
-2. Press `F5` to launch the Extension Development Host.
-3. In the host window, open `examples/01-classic-mode.md` (classic mode) or `examples/02-slide-mode-basics.md` (slide mode).
-4. Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`) and run `Markdown: Show Markdown Presentation`.
-5. Verify slide rendering and navigation.
+### Test with a local package
 
-### Test with a local VSIX install
-
-If `F5` debugging doesn't work (e.g. in a Codespace or remote container), build and install a `.vsix` package instead:
+When `F5` does not work (a Codespace or a remote container), build and install a package:
 
 ```bash
-npm run package                       # produces markdown-presentation-tool-X.Y.Z.vsix
+npm run package
 code --install-extension markdown-presentation-tool-*.vsix
 ```
 
-Then reload VS Code (`Developer: Reload Window`) and open a markdown file to test.
-
-To uninstall afterward:
+Reload the window and open a Markdown file. To uninstall:
 
 ```bash
 code --uninstall-extension KunalPathak.markdown-presentation-tool
@@ -69,223 +61,114 @@ code --uninstall-extension KunalPathak.markdown-presentation-tool
 
 The `.vsix` file is git-ignored. Do not commit it.
 
-### Local quality checks (run before pushing)
+### Check rendering in a browser
+
+`node scripts/render-harness.js` serves the generated page on `localhost`. The procedure is in [testing.md](testing.md#browser-harness-procedure).
+
+### Checks before every commit
 
 ```bash
-npm test                              # Unit tests + ESLint (same as CI)
-npm run package                       # Packages to .vsix; verifies the build
+npm test                              # unit tests, Prettier check, ESLint
+npm run package                       # builds the .vsix and verifies packaging
 ```
 
-### Committing
+`npm run format` rewrites JavaScript and JSON with the repository's Prettier configuration. Prettier and ESLint share one style, so a format run never conflicts with the lint run. `src/webview.html` and Markdown files are outside Prettier's scope.
 
-No special commit message format is required. Use descriptive messages that explain the change.
+### Commits and branches
 
-Stage files explicitly — avoid `git add .` after running `npm run package`, as build artifacts may be present in the working directory even though they are git-ignored.
+- Work on a feature branch. Do not commit to `main`.
+- Group changes logically: dependencies, code, tests, documentation, version.
+- Write messages that state the problem, the solution, and the reasoning behind non-obvious decisions.
+- Stage files explicitly. Build artifacts can sit in the working directory.
+- Add no attribution trailers to commits, pull requests, or release notes.
 
-```bash
-git add src/extension.js src/webview.html   # or whichever files you changed
-git commit -m "feat: improve slide rendering for nested lists"
-git push origin main
-```
+## Automation
 
+Two GitHub Actions workflows run independently. CI never triggers a release, and a release never starts on its own.
 
-## Automation Overview
+| Workflow        | File                            | Trigger                           | Steps                                                                              |
+| :-------------- | :------------------------------ | :-------------------------------- | :--------------------------------------------------------------------------------- |
+| CI              | `.github/workflows/ci.yml`      | Push to `main`, every pull request | `npm ci`, `npm test`, production audit, package, verify the `.vsix`                |
+| Release Publish | `.github/workflows/release.yml` | Manual `workflow_dispatch`        | Validate version and changelog, test, audit, package, tag, create the GitHub Release |
 
-There are two GitHub Actions workflow files. They are **fully independent** — CI never triggers release, and release never runs automatically.
+Both workflows run Node at the exact `engines.node` floor, so a regression on the lowest supported Node shows up in CI.
 
-| Workflow | File | Trigger | What it does |
-| --- | --- | --- | --- |
-| CI | `.github/workflows/ci.yml` | Every push to `main` and every PR | Lint, unit tests, package, verify `.vsix` |
-| Release Publish | `.github/workflows/release.yml` | Manual `workflow_dispatch` only | Validate version + CHANGELOG, package, create git tag, create GitHub Release |
+## Periodic maintenance
 
-A push **always** runs CI. A release **never** runs automatically — it requires an explicit manual trigger.
+Follow the review procedure in [dependencies.md](dependencies.md#review-procedure) every quarter and whenever an advisory lands. Then confirm that `readme.md` and the guides match the code.
 
+## Release process
 
-## Periodic Maintenance
+Releases are deliberate. Prepare the code, merge, then trigger the workflow.
 
-If the project is quiet for a while, run this checklist monthly or quarterly so the extension stays healthy even without feature work:
-
-1. Install from the lockfile with `npm ci`.
-2. Check direct dependency drift with `npm outdated`.
-3. Review the pinned Mermaid runtime in `src/webview.html` and decide whether to move it to the latest stable tested release.
-4. Update direct dependencies deliberately (prefer small grouped updates over `npm audit fix --force`).
-5. Keep `@types/vscode` aligned with `engines.vscode` unless you intentionally raise the minimum supported VS Code version.
-6. Re-run `npm test` and `npm run package`.
-7. Review `npm audit` output and distinguish shipped-runtime risk from dev-tooling-only noise before acting.
-8. Sanity-check `readme.md`, `docs/architecture.md`, `docs/development.md`, and the example decks so the documented workflow still matches the code.
-9. If you plan to ship the changes, add a `CHANGELOG.md` entry and bump the version only after the repo is green.
-
-
-## What Happens on Every Push
-
-When you push to `main`, `.github/workflows/ci.yml` runs automatically:
-
-1. Checks out the code
-2. Installs dependencies with `npm ci`
-3. Runs unit tests and ESLint (`npm test`)
-4. Packages the extension (`npm run package`)
-5. Verifies the `.vsix` file was produced
-
-If any step fails, the push is flagged in GitHub. Nothing is published. No tag is created.
-
-
-## Release Process
-
-Releases are intentional and manual. There is no special commit message format. Prepare the code, then explicitly trigger the release workflow when ready.
-
-### Step 1 — Decide the version
+### Step 1: Decide the version
 
 Use semantic versioning: `MAJOR.MINOR.PATCH`.
 
-- `patch` — bug fixes, no new features
-- `minor` — backwards-compatible new features
-- `major` — breaking changes
+- `patch`: bug fixes only
+- `minor`: backward-compatible features or visible behavior changes
+- `major`: breaking changes
 
-### Step 2 — Bump `package.json`
+### Step 2: Bump the manifest
 
 ```bash
-npm version patch --no-git-tag-version
+npm version <patch|minor|major> --no-git-tag-version
 ```
 
-Replace `patch` with `minor` or `major` as appropriate. The `--no-git-tag-version` flag prevents a local git tag — tags are created by automation, not by your shell.
+The command updates `package.json` and `package-lock.json`. The flag prevents a local tag, because the release workflow creates tags.
 
-This command updates both `package.json` and `package-lock.json`.
+### Step 3: Update `CHANGELOG.md`
 
-### Step 3 — Update `CHANGELOG.md`
-
-Add a release section at the top of the changelog. The section header must use this exact format:
+Add a section at the top with this exact header format. The release workflow validates it against `package.json`.
 
 ```
 ## [X.Y.Z] - YYYY-MM-DD
 ```
 
-The version in brackets must exactly match `package.json`. The release workflow validates this.
+List user-facing changes only.
 
-Example:
+### Step 4: Validate store constraints
 
-```markdown
-## [0.2.0] - 2026-04-15
+- The icon is at least 128x128 pixels. The manifest reference documents that minimum and recommends 256x256. It documents no maximum, so confirm the icon file is the one the previous release shipped or check the listing after publishing.
+- `npx vsce ls` lists no development files. `test/package.test.js` checks this on every run.
+- `engines.vscode` and the `@types/vscode` pin agree. `test/package.test.js` checks this too.
 
-### Added
-- Slide mode: split content between `<!-- slide -->` and `<!-- /slide -->` tags
-- Full Markdown rendering per slide: headings, lists, blockquotes, inline code, bold, italic
-```
+### Step 5: Build and smoke-test the package
 
-### Step 4 — Commit and push
+Build the package from the final commit with `npm run package`. Run the installed-extension smoke check in [testing.md](testing.md#installed-extension-smoke-check). Publish only after that check passes.
 
-```bash
-git add package.json package-lock.json CHANGELOG.md
-git commit -m "chore: bump version to X.Y.Z"
-git push origin main
-```
+### Step 6: Merge, then trigger the workflow
 
-Any commit message is fine. Wait for CI to pass before proceeding.
-
-### Step 5 — Trigger the release workflow
-
-Once CI is green, run the release workflow. Pass the version number **without** the `v` prefix.
-
-**Using the `gh` CLI (recommended):**
+Merge the branch to `main` with a merge commit, run `npm test` on the merged result, and wait for CI to pass. Then run:
 
 ```bash
 gh workflow run release.yml --ref main -f version=X.Y.Z
 ```
 
-**Using the GitHub web UI:**
+Pass the version without a `v` prefix. The workflow validates the branch, the version format, the manifest version, and the changelog entry. It verifies that the tag `mpt-vX.Y.Z` does not exist, runs the tests and the production audit, packages the extension, creates and pushes the tag, and creates a GitHub Release with the `.vsix` attached. The workflow stops there. Marketplace publishing is manual.
 
-1. Go to **Actions** → **Markdown Presentation Tool — Release & Publish**.
-2. Click **Run workflow**.
-3. Select the `main` branch.
-4. Enter the version (e.g. `1.2.1`) in the `version` field.
-5. Click **Run workflow**.
+### Step 7: Publish to the Marketplace
 
-### What the release workflow does
-
-1. Validates the workflow was triggered from `main`
-2. Validates the `version` input matches semver format `X.Y.Z`
-3. Validates that `package.json` version matches the input version
-4. Validates that `CHANGELOG.md` contains a `## [X.Y.Z]` entry for the version
-5. Verifies the git tag `mpt-vX.Y.Z` does not already exist on the remote
-6. Installs dependencies with `npm ci`
-7. Packages the extension with `npm run package`
-8. Verifies the `.vsix` was produced
-9. Creates and pushes the `mpt-vX.Y.Z` git tag
-10. Creates a GitHub Release titled "Markdown Presentation Tool vX.Y.Z" with the `.vsix` attached and auto-generated release notes
-11. Stops after the GitHub Release is created; Marketplace publishing is still manual
-
-### Step 6 — Publish to the VS Code Marketplace manually
-
-After verifying the GitHub Release artifact, publish from the repo root:
+After verifying the GitHub Release artifact, publish from the repository root:
 
 ```bash
 npm ci
 npm run publish -- --pat <VSCE_PAT>
 ```
 
-This uses the locally installed `@vscode/vsce` version from `devDependencies`.
-
+Then confirm that the Marketplace listing shows the new version (allow for propagation delay), that the release exists with its asset, and that CI is green.
 
 ## Troubleshooting
 
-### CI failed
-
-Read the failing step in the GitHub Actions log. Common causes:
-
-- **Lint failure** — run `npm run lint` locally and fix ESLint errors before pushing
-- **Test failure** — run `npm test` locally to reproduce
-- **Package failure** — run `npm run package` locally; check `package.json` for syntax errors or missing fields
-
-### Release workflow failed: wrong branch
-
-The release workflow only accepts `main`. If you triggered from the wrong branch:
-
-```bash
-gh workflow run release.yml --ref main -f version=X.Y.Z
-```
-
-### Release workflow failed: invalid version format
-
-The `version` input must be exactly `X.Y.Z` — three dot-separated integers, no `v` prefix.
-
-- Correct: `1.2.1`
-- Wrong: `v1.2.1`, `1.2`, `1.2.1-beta`
-
-### Release workflow failed: version mismatch
-
-The `version` input does not match the version in `package.json`. Run `npm version patch --no-git-tag-version` to bump (or edit `package.json` directly), commit, push, wait for CI, then re-run the workflow.
-
-### Release workflow failed: missing CHANGELOG entry
-
-`CHANGELOG.md` does not contain a `## [X.Y.Z]` header for the version. Add the entry, commit, push, wait for CI, then re-run the workflow.
-
-### Release workflow failed: tag already exists
-
-That version has already been released. Use a new version number. If the previous release was erroneous and you need to retag, delete the remote tag intentionally:
-
-```bash
-git push origin --delete mpt-vX.Y.Z
-```
-
-Then re-run the workflow.
-
-### Manual Marketplace publish failed
-
-The most common cause is an invalid or expired `VSCE_PAT`. Generate a fresh token for the Marketplace publisher account, then re-run:
-
-```bash
-npm run publish -- --pat <VSCE_PAT>
-```
-
-### CI passed but nothing was published
-
-Expected. CI never publishes. After CI passes, run the release workflow manually as described in Step 5 of the release process.
-
-
-## Branch Conventions
-
-- All work happens on `main`.
-- Use descriptive commit messages. No special format is required for any type of commit.
-- Stage files explicitly rather than using `git add .`.
-- Let automation handle git tags and GitHub Releases.
-- Publish to the Marketplace manually only after you verify the generated `.vsix` and GitHub Release.
-- Keep this file (`docs/development.md`) as the live source of truth for the development and release process.
+| Symptom                                | Cause and fix                                                                                       |
+| :------------------------------------- | :-------------------------------------------------------------------------------------------------- |
+| CI fails at the format step            | Run `npm run format` and commit the result                                                          |
+| CI fails at lint or test               | Run `npm test` locally on the `engines.node` floor to reproduce                                     |
+| Package step fails                     | Run `npm run package`. Check `package.json` for syntax errors or missing fields                     |
+| Release fails: wrong branch            | Run the workflow with `--ref main`                                                                  |
+| Release fails: invalid version         | Use exactly `X.Y.Z`. `v1.2.1`, `1.2`, and `1.2.1-beta` are rejected                                  |
+| Release fails: version mismatch        | Make the input match `package.json`, commit, wait for CI, run the workflow again                    |
+| Release fails: missing changelog entry | Add the `## [X.Y.Z]` header, commit, wait for CI, run the workflow again                            |
+| Release fails: tag exists              | That version is released. Use a new version. Delete the remote tag only when it was created in error |
+| Marketplace publish fails              | The token is usually invalid or expired. Create a new `VSCE_PAT` and run the publish command again  |
+| CI passed, nothing published           | Expected. CI never publishes                                                                        |

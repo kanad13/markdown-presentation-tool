@@ -13,6 +13,7 @@ New contributors read [development.md](development.md) first, then [architecture
 - [testing.md](testing.md): the map from user workflows to evidence, and the manual checks
 - [dependencies.md](dependencies.md): version selection, support floors, and the quarterly review procedure
 - [decisions.md](decisions.md): ideas that were evaluated and not built, with reopen conditions
+- [workflows.md](workflows.md): the procedure and stopping point for each kind of request
 
 ## Navigation
 

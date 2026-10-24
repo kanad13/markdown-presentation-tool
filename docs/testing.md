@@ -37,6 +37,7 @@ Each row names a workflow a user performs, the evidence that protects it, and an
 | See diagrams                               | Harness: every example deck, light and dark                                                                       | Automated browser test is not built             |
 | Present with the CDN unreachable           | Harness with an unreachable version; template test that the import is dynamic                                     | Manual                                          |
 | Keep the slide position across reloads     | `test/lifecycle.test.js`: the document key reaches the generated page; `test/extension.test.js`: key escaping      | `getState`/`setState` in a real webview (manual) |
+| Keep the documents consistent              | `test/docs.test.js`: relative links, heading anchors, and the task routing table against `docs/workflows.md`      | Claims about behavior are manual (Sync and Audit) |
 | Install the package                        | `test/package.test.js`: `vsce ls` shows required files and no development files                                   | Install in a real editor (manual)               |
 
 ## Commands

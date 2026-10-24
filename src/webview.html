@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-{{NONCE}}' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src https: data:;">
+	<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-{{NONCE}}' {{MERMAID_BASE_URL}}; style-src 'unsafe-inline'; img-src https: data:; base-uri 'none'; form-action 'none';">
 	<title>Markdown Presentation</title>
 	<style>
 		* { box-sizing: border-box; margin: 0; padding: 0; }
@@ -181,24 +181,7 @@
 	</div>
 	<div class="slide-counter"></div>
 
-	<script type="module" nonce="{{NONCE}}">
-		import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11.14.0/dist/mermaid.esm.min.mjs';
-
-		const slides = {{SLIDES_JSON}};
-		let currentIndex = 0;
-
-		mermaid.initialize({
-			startOnLoad: false,
-			theme: '{{THEME}}',
-			securityLevel: 'loose'
-		});
-
-		const container = document.querySelector('.slide-inner');
-		const counter = document.querySelector('.slide-counter');
-		const prevBtn = document.querySelector('.nav-arrow.prev');
-		const nextBtn = document.querySelector('.nav-arrow.next');
-		const scrollContainer = document.querySelector('.slide-content');
-
+	<script nonce="{{NONCE}}" id="renderer">
 		function escapeHtml(str) {
 			return str
 				.replace(/&/g, '&amp;')
@@ -207,17 +190,20 @@
 				.replace(/"/g, '&quot;');
 		}
 
+		// Emphasis runs only outside code spans, and "_" only at word edges, so
+		// identifiers such as snake_case_name are not turned into italics.
 		function renderInline(text) {
-			let out = escapeHtml(text);
-			// Inline code
-			out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
-			// Bold (** or __)
-			out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-			out = out.replace(/__([^_]+)__/g, '<strong>$1</strong>');
-			// Italic (* or _)
-			out = out.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');
-			out = out.replace(/(^|[^_])_([^_]+)_/g, '$1<em>$2</em>');
-			return out;
+			return text.split(/(`[^`]+`)/).map(function (part, i) {
+				if (i % 2 === 1) {
+					return '<code>' + escapeHtml(part.slice(1, -1)) + '</code>';
+				}
+				let out = escapeHtml(part);
+				out = out.replace(/\*\*(?!\s)([^*]+?)\*\*/g, '<strong>$1</strong>');
+				out = out.replace(/(^|[^\p{L}\p{N}_])__(?!\s)([^_]+?)__(?![\p{L}\p{N}_])/gu, '$1<strong>$2</strong>');
+				out = out.replace(/(^|[^*])\*(?![\s*])([^*]+?)\*/g, '$1<em>$2</em>');
+				out = out.replace(/(^|[^\p{L}\p{N}_])_(?![\s_])([^_]+?)_(?![\p{L}\p{N}_])/gu, '$1<em>$2</em>');
+				return out;
+			}).join('');
 		}
 
 		function renderMarkdownToHtml(markdown) {
@@ -348,37 +334,103 @@
 			return html;
 		}
 
+	</script>
+
+	<script type="module" nonce="{{NONCE}}">
+		const slides = {{SLIDES_JSON}};
+		const docKey = {{DOC_KEY_JSON}};
+		const vscodeApi = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : undefined;
+		let currentIndex = 0;
+
+		// Slide position survives the webview being destroyed while hidden or
+		// re-rendered after a settings change, but only for the same file.
+		const saved = vscodeApi ? vscodeApi.getState() : undefined;
+		if (saved && saved.key === docKey && Number.isInteger(saved.index)) {
+			currentIndex = Math.max(0, Math.min(saved.index, slides.length - 1));
+		}
+
+		// Mermaid is optional: a failed CDN load (offline, blocked) disables
+		// diagrams only. Text slides, navigation and live update keep working.
+		let mermaidPromise;
+		function loadMermaid() {
+			if (!mermaidPromise) {
+				mermaidPromise = import({{MERMAID_MODULE_URL_JSON}}).then((mod) => {
+					mod.default.initialize({ startOnLoad: false, theme: '{{THEME}}' });
+					return mod.default;
+				});
+			}
+			return mermaidPromise;
+		}
+
+		const container = document.querySelector('.slide-inner');
+		const counter = document.querySelector('.slide-counter');
+		const prevBtn = document.querySelector('.nav-arrow.prev');
+		const nextBtn = document.querySelector('.nav-arrow.next');
+		const scrollContainer = document.querySelector('.slide-content');
+
 		let mermaidIdCounter = 0;
+		// Guards against two overlapping async renders writing into the same container.
+		let renderToken = 0;
+
+		function showDiagramError(node, message) {
+			const note = document.createElement('p');
+			note.style.color = 'var(--vscode-errorForeground)';
+			note.textContent = message;
+			node.classList.remove('mermaid');
+			node.before(note);
+		}
 
 		async function renderSlide(index) {
 			currentIndex = index;
-			const markdown = slides[currentIndex];
-			container.innerHTML = renderMarkdownToHtml(markdown);
+			const token = ++renderToken;
+			container.innerHTML = renderMarkdownToHtml(slides[currentIndex]);
 			scrollContainer.scrollTop = 0;
-
-			// Assign unique IDs so Mermaid v11 tracks each element independently
-			// across slide navigations (avoids stale internal-ID collisions).
-			const mermaidNodes = container.querySelectorAll('.mermaid');
-			for (const node of mermaidNodes) {
-				node.id = 'mermaid-' + (mermaidIdCounter++);
-				node.removeAttribute('data-processed');
-			}
-
-			if (mermaidNodes.length > 0) {
-				try {
-					await mermaid.run({ nodes: mermaidNodes });
-				} catch (error) {
-					console.error('Mermaid rendering failed:', error);
-					container.innerHTML = '<p style="color: var(--vscode-errorForeground);">Failed to render slide ' + (currentIndex + 1) + ' — check the Mermaid syntax.</p>';
-				}
-			}
 
 			counter.textContent = (currentIndex + 1) + ' / ' + slides.length;
 			prevBtn.disabled = currentIndex === 0;
 			nextBtn.disabled = currentIndex === slides.length - 1;
+			if (vscodeApi) {
+				vscodeApi.setState({ key: docKey, index: currentIndex });
+			}
+
+			const mermaidNodes = Array.from(container.querySelectorAll('.mermaid'));
+			if (mermaidNodes.length === 0) {
+				return;
+			}
+
+			let mermaid;
+			try {
+				mermaid = await loadMermaid();
+			} catch (error) {
+				console.error('Mermaid failed to load:', error);
+				if (token === renderToken) {
+					for (const node of mermaidNodes) {
+						showDiagramError(node, 'Diagram not rendered: the Mermaid library could not be loaded (check your network connection). Diagram source is shown below.');
+					}
+				}
+				return;
+			}
+
+			// Render each diagram on its own so one syntax error leaves the others intact.
+			for (const node of mermaidNodes) {
+				if (token !== renderToken) {
+					return;
+				}
+				// Unique IDs so Mermaid tracks each element independently across navigations.
+				node.id = 'mermaid-' + (mermaidIdCounter++);
+				node.removeAttribute('data-processed');
+				try {
+					await mermaid.run({ nodes: [node] });
+				} catch (error) {
+					console.error('Mermaid rendering failed:', error);
+					if (token === renderToken) {
+						showDiagramError(node, 'Diagram not rendered: check the Mermaid syntax. Diagram source is shown below.');
+					}
+				}
+			}
 		}
 
-		function goNext() {
+				function goNext() {
 			if (currentIndex < slides.length - 1) {
 				renderSlide(currentIndex + 1);
 			}
@@ -452,9 +504,9 @@
 
 		window.addEventListener('message', (event) => {
 			const message = event.data;
-			if (message.type === 'update') {
+			if (message && message.type === 'update' && Array.isArray(message.slides)) {
 				slides.length = 0;
-				slides.push(...message.slides);
+				slides.push(...message.slides.filter((s) => typeof s === 'string'));
 
 				if (slides.length === 0) {
 					container.innerHTML = '<p style="color: var(--vscode-descriptionForeground);">No slides found.</p>';
@@ -475,7 +527,7 @@
 			document.body.classList.add('single-slide');
 		} else {
 			document.body.classList.toggle('single-slide', slides.length === 1);
-			renderSlide(0);
+			renderSlide(currentIndex);
 		}
 	</script>
 </body>

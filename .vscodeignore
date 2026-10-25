@@ -27,3 +27,4 @@ scripts/
 AGENTS.md
 .prettierrc.json
 .prettierignore
+.nvmrc

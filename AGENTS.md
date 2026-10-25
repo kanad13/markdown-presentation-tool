@@ -8,6 +8,7 @@ Agent instructions for this repository. Humans use the same file: [readme.md](re
 - [docs/testing.md](docs/testing.md): the map from user workflows to evidence, and the manual checks. Update it when a workflow, contract, surface, or tool changes.
 - [docs/decisions.md](docs/decisions.md): reasoned deferrals and rejections. It is context, not a task list. Nothing in it is scheduled.
 - [docs/workflows.md](docs/workflows.md): the procedure and stopping point for each kind of request.
+- [docs/sibling-extensions.md](docs/sibling-extensions.md): the other extensions published as KunalPathak, and the files they share.
 - [docs/architecture.md](docs/architecture.md): how slides are extracted and rendered.
 - [docs/development.md](docs/development.md): setup, daily checks, CI, and the release process.
 
@@ -35,6 +36,7 @@ Match the maintainer's request to a workflow in [docs/workflows.md](docs/workflo
 | "Release", "publish", "ship it"                                              | Release                  |
 | "Check for drift", "sync the repo", "are the docs accurate?"                 | Sync and Audit           |
 | "Update the docs", "rewrite the README"                                      | Change Documentation     |
+| "Do the other extensions need this?", "share this change", "check the sibling extensions" | Share With Sibling Extensions |
 
 - **No match:**
   - A question about the code or the docs gets an answer and no file changes.
@@ -42,6 +44,8 @@ Match the maintainer's request to a workflow in [docs/workflows.md](docs/workflo
 - **Evidence:**
   - Verify claims about libraries, store rules, and behavior against the code, a command's output, or primary documentation.
   - Report a check as passed only if you ran it.
+- **Shared files:**
+  - After you change a file listed in [docs/sibling-extensions.md](docs/sibling-extensions.md), run Share With Sibling Extensions before you finish.
 
 ## Architecture rules
 

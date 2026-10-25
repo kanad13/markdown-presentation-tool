@@ -91,7 +91,7 @@ Two GitHub Actions workflows run independently. CI never triggers a release, and
 | CI              | `.github/workflows/ci.yml`      | Push to `main`, every pull request | `npm ci`, `npm test`, production audit, package, verify the `.vsix`                |
 | Release         | `.github/workflows/release.yml` | Push of a `vX.Y.Z` tag, or manual `workflow_dispatch` with a tag | Validate tag, version and changelog, test, package, create the GitHub Release, publish to Open VSX |
 
-Both workflows run Node at the exact `engines.node` floor, so a regression on the lowest supported Node shows up in CI.
+Both workflows run Node at the exact `engines.node` floor, read from `.nvmrc`, so a regression on the lowest supported Node shows up in CI.
 
 ## Periodic maintenance
 

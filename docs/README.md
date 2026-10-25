@@ -14,6 +14,7 @@ New contributors read [development.md](development.md) first, then [architecture
 - [dependencies.md](dependencies.md): version selection, support floors, and the quarterly review procedure
 - [decisions.md](decisions.md): ideas that were evaluated and not built, with reopen conditions
 - [workflows.md](workflows.md): the procedure and stopping point for each kind of request
+- [sibling-extensions.md](sibling-extensions.md): the other extensions published as KunalPathak, and the files they share
 
 ## Navigation
 

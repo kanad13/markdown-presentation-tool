@@ -84,12 +84,12 @@ npm run package                       # builds the .vsix and verifies packaging
 
 ## Automation
 
-Two GitHub Actions workflows run independently. CI never triggers a release, and a release never starts on its own.
+Two GitHub Actions workflows run independently. CI never triggers a release, and a release starts only from a pushed `vX.Y.Z` tag or a manual run with an existing tag.
 
 | Workflow        | File                            | Trigger                           | Steps                                                                              |
 | :-------------- | :------------------------------ | :-------------------------------- | :--------------------------------------------------------------------------------- |
 | CI              | `.github/workflows/ci.yml`      | Push to `main`, every pull request | `npm ci`, `npm test`, production audit, package, verify the `.vsix`                |
-| Release Publish | `.github/workflows/release.yml` | Manual `workflow_dispatch`        | Validate version and changelog, test, audit, package, tag, create the GitHub Release |
+| Release         | `.github/workflows/release.yml` | Push of a `vX.Y.Z` tag, or manual `workflow_dispatch` with a tag | Validate tag, version and changelog, test, package, create the GitHub Release, publish to Open VSX |
 
 Both workflows run Node at the exact `engines.node` floor, so a regression on the lowest supported Node shows up in CI.
 
@@ -115,7 +115,7 @@ Use semantic versioning: `MAJOR.MINOR.PATCH`.
 npm version <patch|minor|major> --no-git-tag-version
 ```
 
-The command updates `package.json` and `package-lock.json`. The flag prevents a local tag, because the release workflow creates tags.
+The command updates `package.json` and `package-lock.json`. The flag prevents a tag at this point, because the tag must point at the merged commit on `main` (step 6).
 
 ### Step 3: Update `CHANGELOG.md`
 
@@ -138,19 +138,23 @@ List user-facing changes only.
 
 Build the package from the final commit with `npm run package`. Run the installed-extension smoke check in [testing.md](testing.md#installed-extension-smoke-check). Publish only after that check passes.
 
-### Step 6: Merge, then trigger the workflow
+### Step 6: Merge, then tag
 
-Merge the branch to `main` with a merge commit, run `npm test` on the merged result, and wait for CI to pass. Then run:
+Merge the branch to `main` with a merge commit, run `npm test` on the merged result, and wait for CI to pass. Then tag the merged commit and push the tag:
 
 ```bash
-gh workflow run release.yml --ref main -f version=X.Y.Z
+git checkout main && git pull
+git tag -a vX.Y.Z -m "Release version X.Y.Z"
+git push origin vX.Y.Z
 ```
 
-Pass the version without a `v` prefix. The workflow validates the branch, the version format, the manifest version, and the changelog entry. It verifies that the tag `mpt-vX.Y.Z` does not exist, runs the tests and the production audit, packages the extension, creates and pushes the tag, and creates a GitHub Release with the `.vsix` attached. The workflow stops there. Marketplace publishing is manual.
+The tag push starts the release workflow. It checks that the tag is on `main` and matches `package.json` and the changelog entry, runs the tests, packages the extension, creates a GitHub Release with the `.vsix` attached, and publishes to Open VSX. The release workflow publishes to Open VSX. It signs in with a short-lived OIDC token that Open VSX issues to the registered trusted publisher (repository `kanad13/markdown-presentation-tool`, workflow `release.yml`), so no stored token is needed. The repository secret `OVSX_PAT` is a fallback: when it is set, the workflow uses it instead of OIDC. Delete it after a release has published through OIDC.
+
+If the run fails after the tag exists, fix the cause and start the workflow again from the Actions tab (**Release > Run workflow**, from `main`, with the tag). Open VSX ignores a version it already has, so repeating a run is safe. Tags created before this scheme use the `mpt-v` prefix. They stay as history and are not published again.
 
 ### Step 7: Publish to the Marketplace
 
-After verifying the GitHub Release artifact, publish from the repository root:
+Open VSX is already published by the workflow. After verifying the GitHub Release artifact, publish to the Marketplace from the repository root:
 
 ```bash
 npm ci
@@ -166,10 +170,10 @@ Then confirm that the Marketplace listing shows the new version (allow for propa
 | CI fails at the format step            | Run `npm run format` and commit the result                                                          |
 | CI fails at lint or test               | Run `npm test` locally on the `engines.node` floor to reproduce                                     |
 | Package step fails                     | Run `npm run package`. Check `package.json` for syntax errors or missing fields                     |
-| Release fails: wrong branch            | Run the workflow with `--ref main`                                                                  |
-| Release fails: invalid version         | Use exactly `X.Y.Z`. `v1.2.1`, `1.2`, and `1.2.1-beta` are rejected                                  |
-| Release fails: version mismatch        | Make the input match `package.json`, commit, wait for CI, run the workflow again                    |
-| Release fails: missing changelog entry | Add the `## [X.Y.Z]` header, commit, wait for CI, run the workflow again                            |
-| Release fails: tag exists              | That version is released. Use a new version. Delete the remote tag only when it was created in error |
+| Release fails: wrong branch            | A manual run must start from `main`. A tag must point at a commit on `main`                          |
+| Release fails: invalid tag             | Use exactly `vX.Y.Z`. `1.2.1`, `v1.2`, and `v1.2.1-beta` are rejected                                |
+| Release fails: version mismatch        | The tag must equal `v` plus the `package.json` version. Fix, merge, and tag the new commit           |
+| Release fails: missing changelog entry | Add the `## [X.Y.Z]` header, merge, and tag the new commit. Ask before moving a pushed tag           |
+| Open VSX publish fails                 | Run the workflow again with the tag. A version Open VSX already has is skipped                       |
 | Marketplace publish fails              | The token is usually invalid or expired. Create a new `VSCE_PAT` and run the publish command again  |
 | CI passed, nothing published           | Expected. CI never publishes                                                                        |

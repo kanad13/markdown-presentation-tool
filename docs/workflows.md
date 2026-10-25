@@ -96,7 +96,7 @@ The goal is a published version that matches a tagged commit.
 - **Local proof:**
   - Build the `.vsix`, run the [installed-extension smoke check](testing.md#installed-extension-smoke-check), and wait for the maintainer's confirmation that it works.
 - **Procedure:**
-  - Follow the [release process](development.md#release-process). The maintainer runs the release workflow; it creates the `mpt-vX.Y.Z` tag and the GitHub Release, and Marketplace publishing stays manual.
+  - Follow the [release process](development.md#release-process). The maintainer pushes the `vX.Y.Z` tag; the release workflow creates the GitHub Release and publishes to Open VSX, and Marketplace publishing stays manual.
 - **Tag:**
   - The workflow tags the exact commit it packages. If a fix lands afterward, report it and ask before you move the tag.
 - **Verify:**

@@ -63,7 +63,7 @@ Two further rules bind how a version is written.
 - **Node:**
   - The `engines.node` floor is the lowest Node release that every tool in `devDependencies` accepts, on a line that still receives security fixes.
   - `@types/node` follows the major line of the Node that the support-floor editor bundles, so typings never describe APIs the extension host lacks.
-  - CI runs `npm test` on exactly the `engines.node` floor.
+  - CI runs `npm test` on exactly the `engines.node` floor. `.nvmrc` holds that version and CI reads it, so change both together; CI fails when they differ.
 
 ## Configuration policy
 

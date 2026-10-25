@@ -127,4 +127,5 @@ Open VS Code Settings (`Cmd+,` or `Ctrl+,`) and search for **Markdown Presentati
 - **Keep dependencies current:** [docs/dependencies.md](docs/dependencies.md) holds the version and support policy.
 - **Review deferred ideas:** [docs/decisions.md](docs/decisions.md) lists features that are intentionally not built, with the conditions that would reopen them.
 - **Pick a task procedure:** [docs/workflows.md](docs/workflows.md) maps each kind of request to its steps and stopping point.
+- **Find the sibling extensions:** [docs/sibling-extensions.md](docs/sibling-extensions.md) lists the other extensions published as KunalPathak and the files they share.
 - **Report an issue:** use the [issue tracker](https://github.com/kanad13/markdown-presentation-tool/issues).

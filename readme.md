@@ -2,15 +2,58 @@
 
 **Present a Markdown file as a slide deck without leaving VS Code.**
 
-[Markdown Presentation Tool](https://marketplace.visualstudio.com/items?itemName=KunalPathak.markdown-presentation-tool) turns the slides you mark in a Markdown file into a navigable slideshow beside your editor. It suits documentation, meeting notes, and architecture diagrams, and it needs no export step. The slides stay in the same plain-text file you already edit, and the slideshow updates as you type.
+[Markdown Presentation Tool](https://marketplace.visualstudio.com/items?itemName=KunalPathak.markdown-presentation-tool) turns the slides you mark in a Markdown file into a navigable slideshow beside your editor. It needs no export step, no configuration, and sends no telemetry.
 
-![Markdown Presentation Tool](https://raw.githubusercontent.com/kanad13/markdown-presentation-tool/refs/heads/main/assets/extension-demo.gif)
+![A slide titled Present Markdown in VS Code with three bullet points and a Mermaid flowchart, shown in a dark theme with a navigation arrow on each side](https://raw.githubusercontent.com/kanad13/markdown-presentation-tool/main/assets/readme-hero-dark.png)
+
+- **Your file is the deck:** the slides stay in the plain-text Markdown file you already edit.
+- **Live:** the slideshow updates as you type and keeps your slide position.
+- **Diagrams:** Mermaid renders from backtick fences and from Azure DevOps `::: mermaid` blocks.
+- **Themes:** slides follow your VS Code light or dark theme.
+
+## Mark slides with HTML comments
+
+Put `<!-- slide -->` on its own line to open a slide and `<!-- /slide -->` on its own line to close it. Only text between the two markers becomes a slide, so notes and drafts stay in the file without showing on screen. The markers are HTML comments, so other Markdown previews hide them.
+
+![A slide showing a Markdown code sample with the slide and slash-slide comment markers around a first slide](https://raw.githubusercontent.com/kanad13/markdown-presentation-tool/main/assets/readme-slide-markers.png)
+
+A file with no `<!-- slide -->` line shows one slide per Mermaid diagram and ignores the text around the diagrams.
+
+## Mermaid diagrams
+
+Write a diagram in a backtick fence or in an Azure DevOps `::: mermaid` block. Both render the same way. A diagram error or an unreachable network affects that diagram only, and text slides keep working.
+
+![A slide showing a Mermaid sequence diagram of an author, a reviewer and a CI system exchanging pull request messages](https://raw.githubusercontent.com/kanad13/markdown-presentation-tool/main/assets/readme-mermaid-diagram.png)
+
+## Markdown rendering
+
+Slides render headings, paragraphs, bullet and numbered lists (one level), bold, italic, inline code, fenced code blocks, blockquotes, horizontal rules, and images from `https://` addresses.
+
+![A slide in a light theme showing a heading, bold and italic text, inline code, a numbered list and a JavaScript code block](https://raw.githubusercontent.com/kanad13/markdown-presentation-tool/main/assets/readme-markdown-rendering.png)
+
+## Light and dark themes
+
+Slides follow the active VS Code color theme, and the Mermaid diagram theme follows it too.
+
+| Dark theme | Light theme |
+| :--------- | :---------- |
+| ![The first slide of a deck in a dark VS Code theme](https://raw.githubusercontent.com/kanad13/markdown-presentation-tool/main/assets/readme-hero-dark.png) | ![The first slide of a deck in a light VS Code theme](https://raw.githubusercontent.com/kanad13/markdown-presentation-tool/main/assets/readme-theme-light.png) |
+
+## Appearance settings
+
+Settings control alignment, font size, background color, the slide counter, and the on-screen arrows. See [Settings](#settings) for the full list.
+
+![A slide with a centered heading and text on a dark blue custom background color](https://raw.githubusercontent.com/kanad13/markdown-presentation-tool/main/assets/readme-appearance-settings.png)
 
 ## Install
 
-- **From the Marketplace:**
+- **VS Code:**
   - Open the [Markdown Presentation Tool page](https://marketplace.visualstudio.com/items?itemName=KunalPathak.markdown-presentation-tool) and select **Install**.
-  - Or search for "Markdown Presentation Tool" in the VS Code Extensions view.
+  - Or search for "Markdown Presentation Tool" in the Extensions view.
+- **Open VSX (Cursor, VSCodium, and other forks):**
+  - Install `KunalPathak.markdown-presentation-tool` from [Open VSX](https://open-vsx.org/extension/KunalPathak/markdown-presentation-tool).
+- **From a `.vsix` file:**
+  - Download the file from the [GitHub releases](https://github.com/kanad13/markdown-presentation-tool/releases) and run **Extensions: Install from VSIX...**.
 - **Requirements:**
   - The current stable release of VS Code, or any older release back to the `engines.vscode` floor in [package.json](package.json).
   - Internet access when a slide contains a Mermaid diagram (see [Privacy and security](#privacy-and-security)).
@@ -23,38 +66,7 @@
    - Select the **Presentation icon** in the editor title bar.
    - Open the Command Palette (`Cmd+Shift+P` or `Ctrl+Shift+P`) and run `Markdown: Show Markdown Presentation`.
 
-Only text inside an open/close pair becomes a slide. Notes, drafts, and reminders outside the pairs stay in the editor.
-
-````markdown
-<!-- slide -->
-
-# My First Slide
-
-Welcome to the presentation!
-
-<!-- /slide -->
-
-Speaker notes, draft text, or reminders can live here.
-They stay in the editor and never appear in the slideshow.
-
-<!-- slide -->
-
-# Mermaid Diagrams Also Work Natively
-
-```mermaid
-graph LR
-    A[Markdown File] --> B[Presentation]
-```
-
-- Images from the web work too!
-
-<!-- /slide -->
-
-- Content outside slide tags is not shown during the presentation.
-- Keep speaker notes, prompts, or draft edits in the same file without leaking them onto slides.
-````
-
-A file with no `<!-- slide -->` line shows one slide per Mermaid diagram and ignores the text around the diagrams.
+Only text inside an open/close pair becomes a slide. See [Mark slides with HTML comments](#mark-slides-with-html-comments) for an example.
 
 ### Navigation
 
@@ -79,28 +91,6 @@ Open VS Code Settings (`Cmd+,` or `Ctrl+,`) and search for **Markdown Presentati
 | **UI**         | `markdownPresentation.slide.showCounter`          | `true`    | Show the slide counter in the bottom-right corner            |
 | **UI**         | `markdownPresentation.slide.showNavigationArrows` | `true`    | Show the on-screen navigation arrows                         |
 
-## Features
-
-- **Editor integration:**
-  - The slideshow opens beside your editor and needs no configuration.
-  - Edits to the source file appear in the slideshow while you type.
-  - The slide position survives switching tabs and changing settings.
-- **Markdown rendering:**
-  - Headings, paragraphs, bullet and numbered lists (one level), blockquotes, and horizontal rules.
-  - Bold, italic, inline code, and fenced code blocks.
-  - Images from `https://` addresses, one image per line.
-- **Diagrams:**
-  - Mermaid diagrams render from backtick fences and from Azure DevOps `::: mermaid` fences.
-  - A diagram error or an unreachable network affects that diagram only. Text slides keep working.
-- **Appearance:**
-  - Slides follow your VS Code light or dark theme.
-  - Settings control alignment, font size, background color, and the on-screen controls.
-- **Clean source files:**
-  - The slide tags are HTML comments, so other Markdown previews hide them.
-- **Not supported:**
-  - Tables, clickable links, nested lists, and images from local file paths.
-  - [decisions.md](docs/decisions.md) records why.
-
 ## Privacy and security
 
 - **Network use:**
@@ -118,6 +108,13 @@ Open VS Code Settings (`Cmd+,` or `Ctrl+,`) and search for **Markdown Presentati
 - **Settings input:**
   - The extension accepts only known values for enumerated settings and a plain CSS color for the background.
   - It ignores any other value.
+
+## What it does not do
+
+- It does not render tables, clickable links, nested lists, or images from local file paths.
+- It does not export to PDF or HTML, and it has no presenter mode or speaker notes window.
+- It does not bundle Mermaid, so diagrams need network access.
+- [decisions.md](docs/decisions.md) records why, and what would change each answer.
 
 ## Contribute
 

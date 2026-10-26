@@ -356,7 +356,9 @@
 			if (!mermaidPromise) {
 				mermaidPromise = import({{MERMAID_MODULE_URL_JSON}}).then(
 					(mod) => {
-						mod.default.initialize({ startOnLoad: false, theme: '{{THEME}}' });
+						// Without suppressErrorRendering Mermaid draws its own error graphic in place of
+						// the diagram, which hides the source that the note below promises.
+						mod.default.initialize({ startOnLoad: false, suppressErrorRendering: true, theme: '{{THEME}}' });
 						return mod.default;
 					},
 					(error) => {
@@ -426,11 +428,14 @@
 				// Unique IDs so Mermaid tracks each element independently across navigations.
 				node.id = 'mermaid-' + (mermaidIdCounter++);
 				node.removeAttribute('data-processed');
+				const source = node.textContent;
 				try {
 					await mermaid.run({ nodes: [node] });
 				} catch (error) {
 					console.error('Mermaid rendering failed:', error);
 					if (token === renderToken) {
+						// A failed run can leave the node empty or half drawn.
+						node.textContent = source;
 						showDiagramError(node, 'Diagram not rendered: check the Mermaid syntax. Diagram source is shown below.');
 					}
 				}

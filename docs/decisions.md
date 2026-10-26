@@ -31,6 +31,7 @@ Related guides: [architecture.md](architecture.md) for the design these decision
 | Browser-driven automated tests          | Defer              | Renderer regressions escape the unit tests twice                |
 | Presenter mode, notes, export           | Reject             | A concrete presenting workflow cannot be met otherwise          |
 | Settings for Mermaid layout and look    | Reject             | The library's defaults stop fitting VS Code themes              |
+| Image hosts in the Content Security Policy | Reject          | A privacy requirement rules out remote images                   |
 
 ## Entries
 
@@ -90,7 +91,7 @@ Related guides: [architecture.md](architecture.md) for the design these decision
 
 - **What it is:**
   - Markdown lets a fence use four or more backticks, or `~~~`, so a code sample can contain a three-backtick fence.
-  - Both the extractor and the renderer toggle on any line that starts with three backticks. A sample wrapped in four backticks that contains a three-backtick fence ends early.
+  - The extractor, the mode check, and the renderer all toggle on any line that starts with three backticks. A sample wrapped in four backticks that contains a three-backtick fence ends early.
 - **Why it is deferred:**
   - It affects only decks that show Markdown syntax inside a slide. The fix needs the same fence-length rule in two places and tests for both.
 - **Reopen when:**
@@ -141,3 +142,14 @@ Related guides: [architecture.md](architecture.md) for the design these decision
   - The dependency policy keeps library visual defaults. Each setting adds a surface to test and document and ties the extension to one library version's option names.
 - **Reopen when:**
   - The library defaults stop fitting VS Code themes.
+
+### Image hosts in the Content Security Policy
+
+- **What it is:**
+  - Replacing `img-src https:` with a list of allowed image hosts.
+  - Reviewed on 2026-10-26 with the rest of the policy ([architecture.md](architecture.md#content-security-policy)).
+- **Why it is rejected:**
+  - Decks point at the image hosts their authors use, so a list would break real decks or grow without end.
+  - The risk is a request to a host the author chose. It carries no document text, and the extension never loads an image on its own.
+- **Reopen when:**
+  - A user needs decks that make no third-party request. A setting that turns remote images off is the lighter answer.

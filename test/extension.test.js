@@ -132,6 +132,8 @@ describe("splitSlides (explicit open/close tags)", () => {
 		const result = splitSlides(input);
 		assert.equal(result.length, 2);
 		assert.match(result[0], /Slide 1/);
+		// Without fence tracking the first close tag ends slide 1 early and drops this line.
+		assert.ok(result[0].includes("<!-- /slide -->"), "the delimiter inside the fence must stay slide text");
 		assert.match(result[1], /Slide 2/);
 	});
 
@@ -525,6 +527,7 @@ describe("getWebviewContent template safety", () => {
 			csp[1]
 		);
 		assert.ok(csp[1].includes("default-src 'none'"));
+		assert.ok(csp[1].includes("img-src https: data:;"), "img-src must stay limited to https: and data:");
 		assert.ok(csp[1].includes("base-uri 'none'"));
 		assert.ok(csp[1].includes("form-action 'none'"));
 		assert.ok(!/unsafe-eval/.test(csp[1]));
@@ -551,5 +554,104 @@ describe("getWebviewContent template safety", () => {
 			"static import would stop all slides when the CDN is unreachable"
 		);
 		assert.ok(html.includes('import("https://cdn.jsdelivr.net/npm/mermaid@'));
+	});
+});
+
+describe("code-aware extraction", () => {
+	it("keeps the A:::class shorthand inside a ::: mermaid block", () => {
+		const input = "::: mermaid\ngraph TD\n  A:::hot --> B\n:::\n";
+		assert.deepEqual(extractMermaidBlocks(input), ["graph TD\n  A:::hot --> B"]);
+	});
+
+	it("closes a ::: mermaid block only at a ::: line of its own", () => {
+		const input =
+			"::: mermaid\ngraph TD\n  A --> B\n  B:::hot --> C\n:::\n\n::: mermaid\ngraph LR\n  X --> Y\n:::\n";
+		const result = extractMermaidBlocks(input);
+		assert.equal(result.length, 2);
+		assert.match(result[0], /B:::hot --> C/);
+	});
+
+	it("does not extract a mermaid fence that appears inside other fenced code", () => {
+		const input = "```markdown\n::: mermaid\ngraph TD\n  A --> B\n:::\n```\n";
+		assert.deepEqual(extractMermaidBlocks(input), []);
+	});
+
+	it("does not extract ::: mermaid text from the middle of a line", () => {
+		assert.deepEqual(extractMermaidBlocks("Write ::: mermaid\nfoo\n:::\n"), []);
+	});
+
+	it("does not enter slide mode on a delimiter that sits inside a code fence", () => {
+		const input = "```markdown\n<!-- slide -->\n```\n\n```mermaid\ngraph TD\n  A --> B\n```\n";
+		assert.equal(hasSlideDelimiter(input), false);
+		assert.deepEqual(getSlides(input), ["```mermaid\ngraph TD\n  A --> B\n```"]);
+	});
+
+	it("does not enter slide mode on a delimiter that sits inside a ::: mermaid block", () => {
+		assert.equal(hasSlideDelimiter("::: mermaid\n<!-- slide -->\n:::\n"), false);
+	});
+
+	it("still detects a delimiter that follows a closed code fence", () => {
+		assert.equal(hasSlideDelimiter("```js\nx\n```\n<!-- slide -->\n"), true);
+	});
+});
+
+describe("webview page contract", () => {
+	const settings = {
+		mermaidTheme: "default",
+		showCounter: true,
+		showNavigationArrows: true,
+		headingAlignment: "left",
+		contentAlignment: "left",
+		fontSize: "medium",
+		backgroundColor: "",
+	};
+	const html = getWebviewContent(["# x"], "n0nce", settings);
+	// Whole-line comments are dropped so a guard that survives only in a comment does not satisfy a check.
+	const code = html
+		.split("\n")
+		.filter((line) => !/^\s*\/\//.test(line))
+		.join("\n");
+
+	it("sets the Content Security Policy before any script element", () => {
+		const policy = html.indexOf("Content-Security-Policy");
+		assert.ok(policy !== -1);
+		assert.ok(policy < html.indexOf("<script"), "the policy must precede every script");
+	});
+
+	it("gives every script element the render nonce", () => {
+		const tags = html.match(/<script\b[^>]*>/g) ?? [];
+		assert.equal(tags.length, 2);
+		for (const tag of tags) {
+			assert.ok(tag.includes('nonce="n0nce"'), `${tag} has no nonce`);
+		}
+	});
+
+	it("defines the renderer before the module script that calls it", () => {
+		const renderer = html.indexOf('id="renderer"');
+		const moduleScript = html.indexOf('<script type="module"');
+		assert.ok(renderer !== -1 && moduleScript !== -1);
+		assert.ok(renderer < moduleScript, "renderMarkdownToHtml must exist before the module runs");
+		assert.ok(html.indexOf("function renderMarkdownToHtml") < moduleScript);
+	});
+
+	it("configures Mermaid to draw no error graphic and to start only on request", () => {
+		assert.ok(code.includes("startOnLoad: false"));
+		assert.ok(code.includes("suppressErrorRendering: true"));
+	});
+
+	it("restores the diagram source after a failed render", () => {
+		assert.match(
+			code,
+			/catch \(error\) \{[^}]*console\.error\('Mermaid rendering failed:'[\s\S]*?node\.textContent = source;/
+		);
+	});
+
+	it("drops a render that a newer navigation has replaced", () => {
+		assert.ok(code.includes("if (token !== renderToken)"));
+		assert.ok(code.includes("const token = ++renderToken;"));
+	});
+
+	it("restores the slide position only for the same document", () => {
+		assert.ok(code.includes("saved.key === docKey"));
 	});
 });

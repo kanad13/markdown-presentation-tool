@@ -74,6 +74,17 @@ Match the maintainer's request to a workflow in [docs/workflows.md](docs/workflo
 - Push, tag, merge, and publish only when the maintainer says so.
 - Add no `Co-Authored-By` trailers and no tool or model attribution to commits, pull requests, files, or release notes.
 
+## Tools and Authority
+
+`gh`, `vsce`, and `ovsx` are installed and signed in. The full text is in [docs/sibling-extensions.md](docs/sibling-extensions.md#tools-and-authority).
+
+- **Read with the tools:**
+  - Fetch GitHub, Marketplace, and Open VSX state yourself, and do not ask for approval or for a web page.
+- **Change state on the maintainer's word:**
+  - Merge, push, tag, and publish wait for the maintainer. After they say so, run each step without asking again.
+- **Never handle tokens:**
+  - Do not read, print, store, or paste one. If a tool or sign-in is missing, ask the maintainer.
+
 ## Multi-file change protocol
 
 After an edit that touches several files, align code, tests, and documents before committing.

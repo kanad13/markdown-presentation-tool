@@ -34,6 +34,9 @@ Each row names a workflow a user performs, the evidence that protects it, and an
 | Hostile setting values                     | `test/extension.test.js`: allow-lists and the color sanitizer                                                     | None                                            |
 | Hostile slide text                         | `test/webview.test.js` (escaping), `test/extension.test.js` (placeholders and `$` patterns, `<` in JSON)          | None                                            |
 | Read rendered Markdown                     | `test/webview.test.js` runs the shipped renderer block                                                            | Visual styling (harness)                        |
+| Mermaid fence quoted in code, `A:::class` shorthand | `test/extension.test.js`: code-aware extraction and mode detection                                    | None                                            |
+| Bad diagram on a slide                     | Page-contract tests pin the error settings; harness step 6 shows the note and the source                          | Rendering is manual                             |
+| Keep the page contract                     | `test/extension.test.js`: policy before scripts, nonce on both scripts, renderer before module, Mermaid options, stale-render guard | Runtime order in a real webview (harness)       |
 | See diagrams                               | Harness: every example deck, light and dark                                                                       | Automated browser test is not built             |
 | Present with the CDN unreachable           | Harness with an unreachable version; template test that the import is dynamic                                     | Manual                                          |
 | Keep the slide position across reloads     | `test/lifecycle.test.js`: the document key reaches the generated page; `test/extension.test.js`: key escaping      | `getState`/`setState` in a real webview (manual) |
@@ -75,6 +78,7 @@ The harness serves the exact page that the extension generates, with a stand-in 
 3. Step through every slide with the arrow keys. Every diagram renders and the console shows no errors.
 4. Repeat for each file in `examples/` in both themes.
 5. To check the offline path, change `MERMAID_VERSION` temporarily to a version that does not exist, restart the harness, and confirm that text slides render and each diagram slide shows a note with the source. Restore the constant afterward.
+6. To check a syntax error, add a slide with a broken diagram (for example `graph TD` followed by `A --> --> B [`). Confirm that the slide shows a red note and the diagram source, that Mermaid's bomb graphic does not appear, and that the next slide still renders.
 
 Run this procedure whenever `MERMAID_VERSION`, the Content Security Policy, the renderer, or the stylesheet changes.
 

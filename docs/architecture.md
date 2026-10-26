@@ -43,10 +43,16 @@ Mermaid-only mode keeps files written for the original `mermaid-slideshow` exten
   - Stray closing tags and repeated opening tags are ignored.
   - Delimiters inside fenced code blocks (triple backticks or `::: mermaid`) are ignored.
   - A leading YAML front matter block is removed before processing.
+  - `hasSlideDelimiter()` applies the same rule when it picks the mode, so a delimiter shown in a code sample does not turn a Mermaid-only file into a slide file.
 
 ### Mermaid syntaxes
 
-Two fence syntaxes work in both modes: backtick fences (```` ```mermaid ````) and Azure DevOps fences (`::: mermaid`). `extractMermaidBlocks()` finds both in one regex pass, so diagrams keep their document order.
+Two fence syntaxes work in both modes: backtick fences (```` ```mermaid ````) and Azure DevOps fences (`::: mermaid`). `extractMermaidBlocks()` finds both in one line-by-line pass, so diagrams keep their document order.
+
+- **Fence rules:**
+  - A fence opens at the start of a line, and a `:::` block closes only at a `:::` line of its own, as in the renderer.
+  - A Mermaid fence quoted inside another code block is sample text, not a diagram, and the class shorthand `A:::hot` stays inside its diagram.
+  - Longer backtick fences and `~~~` fences are not recognized. [decisions.md](decisions.md#longer-or-tilde-code-fences) records why.
 
 ## Webview rendering
 
@@ -78,8 +84,9 @@ The template holds two scripts and one stylesheet.
 - **Isolation:**
   - A failed load shows a note and the diagram source on that slide. Text slides, navigation, and live update keep working.
   - Each diagram renders on its own, so one syntax error leaves the others intact.
+  - A syntax error shows a note and the diagram source. Mermaid draws no error graphic of its own, and the page restores the source text because a failed run can leave the node empty.
 - **Configuration:**
-  - The module sets `startOnLoad` and `theme` only. The library default applies for everything else, including `securityLevel`, which is `strict`.
+  - The module sets `startOnLoad`, `suppressErrorRendering`, and `theme` only. The library default applies for everything else, including `securityLevel`, which is `strict`.
 
 ### Content Security Policy
 
@@ -93,6 +100,17 @@ The template holds two scripts and one stylesheet.
 | `form-action`  | `'none'`                                          | No form posts                                           |
 
 The nonce comes from `crypto.randomBytes` and changes on every render.
+
+**Review finding (2026-10-26):** the policy has no gap that lets document text run script, and no change is made.
+
+- **Scripts:**
+  - `script-src` names a directory of one pinned Mermaid version, not the whole CDN host, so a raw `<script src>` from jsDelivr cannot run even if it reached the page. It cannot reach the page, because renderer output escapes slide text and only `<img>` is built from a URL.
+  - A test pins the directory scope and the nonce on both scripts.
+- **Messages to the host:**
+  - The page never calls `postMessage`. It receives `update` messages and stores the slide position with `setState`.
+  - A message handler on the host is a new surface. Add one only with a scheme allow-list and tests, as [decisions.md](decisions.md#links-in-slide-text) describes.
+- **Images:**
+  - `img-src https:` accepts any host, because decks name their own image hosts. A deck that embeds a remote image tells that host the viewer's IP address. [decisions.md](decisions.md#image-hosts-in-the-content-security-policy) records the trade-off.
 
 ### Image support
 

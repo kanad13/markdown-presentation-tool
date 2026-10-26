@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.1] - 2026-10-26
+
+### Fixed
+
+- A Mermaid-only file no longer treats a `<!-- slide -->` line shown inside a code block as a slide marker.
+- A `::: mermaid` diagram that uses the class shorthand `A:::name` is no longer cut short.
+- A Mermaid fence quoted inside another code block is no longer shown as a diagram slide.
+- A diagram with a syntax error now shows its source below the error note, instead of Mermaid's error graphic.
+
+### Changed
+
+- The README shows screenshots of each feature instead of an animated GIF.
+
 ## [2.2.0] - 2026-10-25
 
 ### Changed

@@ -99,8 +99,13 @@ The goal is a published version that matches a tagged commit.
   - Follow the [release process](development.md#release-process). The maintainer pushes the `vX.Y.Z` tag; the release workflow creates the GitHub Release and publishes to Open VSX, and Marketplace publishing stays manual.
 - **Tag:**
   - The workflow tags the exact commit it packages. If a fix lands afterward, report it and ask before you move the tag.
+- **Retry:**
+  - Tag the merge commit after CI is green on `main`. Never re-push an old tag, because the workflow runs on every pushed `vX.Y.Z` tag and would run that release again.
+  - Open VSX can be read-only. When the Open VSX step fails for that reason, run `gh workflow run Release --ref main -f tag=vX.Y.Z` again. A version the registry already has is skipped.
 - **Verify:**
-  - Check the Marketplace listing (allow for propagation delay), the GitHub Release asset, and CI.
+  - The Marketplace step is manual (`npm run publish`), and its page lags 5 to 10 minutes.
+  - Check state with `gh release view vX.Y.Z`, `ovsx show KunalPathak.markdown-presentation-tool`, and `vsce show KunalPathak.markdown-presentation-tool`, not with a polling loop.
+  - Check the GitHub Release asset and CI.
 
 ## Sync and Audit
 

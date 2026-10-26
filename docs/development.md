@@ -165,7 +165,7 @@ git tag -a vX.Y.Z -m "Release version X.Y.Z"
 git push origin vX.Y.Z
 ```
 
-The tag push starts the release workflow. It checks that the tag is on `main` and matches `package.json` and the changelog entry, runs the tests, packages the extension, creates a GitHub Release with the `.vsix` attached, and publishes to Open VSX. The release workflow publishes to Open VSX. It signs in with a short-lived OIDC token that Open VSX issues to the registered trusted publisher (repository `kanad13/markdown-presentation-tool`, workflow `release.yml`), so no stored token is needed. The repository secret `OVSX_PAT` is a fallback: when it is set, the workflow uses it instead of OIDC. Delete it after a release has published through OIDC.
+The tag push starts the release workflow. Never re-push an old tag, because it would run that release again. It checks that the tag is on `main` and matches `package.json` and the changelog entry, runs the tests, packages the extension, creates a GitHub Release with the `.vsix` attached, and publishes to Open VSX. The release workflow publishes to Open VSX. It signs in with a short-lived OIDC token that Open VSX issues to the registered trusted publisher (repository `kanad13/markdown-presentation-tool`, workflow `release.yml`), so no stored token is needed. The repository secret `OVSX_PAT` is a fallback: when it is set, the workflow uses it instead of OIDC. Delete it after a release has published through OIDC.
 
 If the run fails after the tag exists, fix the cause and start the workflow again from the Actions tab (**Release > Run workflow**, from `main`, with the tag). Open VSX ignores a version it already has, so repeating a run is safe. Tags created before this scheme use the `mpt-v` prefix. They stay as history and are not published again.
 
@@ -178,7 +178,7 @@ npm ci
 npm run publish -- --pat <VSCE_PAT>
 ```
 
-Then confirm that the Marketplace listing shows the new version (allow for propagation delay), that the release exists with its asset, and that CI is green.
+Then confirm each result with a command, not a polling loop: `vsce show KunalPathak.markdown-presentation-tool` for the Marketplace (the page lags 5 to 10 minutes), `ovsx show KunalPathak.markdown-presentation-tool` for Open VSX, and `gh release view vX.Y.Z` for the release and its asset. CI must be green.
 
 ## Troubleshooting
 
@@ -191,6 +191,6 @@ Then confirm that the Marketplace listing shows the new version (allow for propa
 | Release fails: invalid tag             | Use exactly `vX.Y.Z`. `1.2.1`, `v1.2`, and `v1.2.1-beta` are rejected                                |
 | Release fails: version mismatch        | The tag must equal `v` plus the `package.json` version. Fix, merge, and tag the new commit           |
 | Release fails: missing changelog entry | Add the `## [X.Y.Z]` header, merge, and tag the new commit. Ask before moving a pushed tag           |
-| Open VSX publish fails                 | Run the workflow again with the tag. A version Open VSX already has is skipped                       |
+| Open VSX publish fails                 | Open VSX can be read-only. Run `gh workflow run Release --ref main -f tag=vX.Y.Z` again. A version it already has is skipped |
 | Marketplace publish fails              | The token is usually invalid or expired. Create a new `VSCE_PAT` and run the publish command again  |
 | CI passed, nothing published           | Expected. CI never publishes                                                                        |

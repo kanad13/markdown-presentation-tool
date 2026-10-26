@@ -31,21 +31,54 @@ const CLOSE_SLIDE_DELIMITER = /^<!--\s*\/slide\s*-->\s*$/i;
  * - Backtick style: ```mermaid ... ```
  * - Azure DevOps / Fenced Div style: ::: mermaid ... :::
  *
- * Operates on raw text via regex - no markdown parsing required.
+ * Scans line by line with the same fence rules as the webview renderer: a
+ * fence opens at the start of a line and a ::: block closes only at a ::: line
+ * of its own. A regex over the whole text would end a ::: block at the class
+ * shorthand in "A:::hot --> B", and would treat a Mermaid fence quoted inside
+ * another code block as a diagram. An unclosed block is dropped.
  *
  * @param {string} rawText - Raw markdown file content
  * @returns {string[]} Array of Mermaid diagram code strings (trimmed)
  */
 function extractMermaidBlocks(rawText) {
 	const blocks = [];
+	/** @type {"" | "backtick" | "colon" | "code"} */
+	let inside = "";
+	let current = [];
 
-	// One alternation keeps blocks in document order when both syntaxes are mixed.
-	const blockRegex = /```mermaid\s*\n([\s\S]*?)```|:::\s*mermaid\s*\n([\s\S]*?):::/g;
-	let match;
-	while ((match = blockRegex.exec(rawText)) !== null) {
-		const code = (match[1] ?? match[2]).trim();
+	function finish() {
+		const code = current.join("\n").trim();
 		if (code) {
 			blocks.push(code);
+		}
+		current = [];
+		inside = "";
+	}
+
+	// One pass keeps blocks in document order when both syntaxes are mixed.
+	for (const line of rawText.split(/\r?\n/)) {
+		if (inside === "backtick") {
+			if (/^```\s*$/.test(line)) {
+				finish();
+			} else {
+				current.push(line);
+			}
+		} else if (inside === "colon") {
+			if (/^:::\s*$/.test(line)) {
+				finish();
+			} else {
+				current.push(line);
+			}
+		} else if (inside === "code") {
+			if (/^```\s*$/.test(line)) {
+				inside = "";
+			}
+		} else if (/^```mermaid\s*$/.test(line)) {
+			inside = "backtick";
+		} else if (/^```/.test(line)) {
+			inside = "code";
+		} else if (/^:::\s*mermaid/.test(line)) {
+			inside = "colon";
 		}
 	}
 
@@ -57,7 +90,9 @@ function extractMermaidBlocks(rawText) {
  *
  * A slide document is detected by the presence of an opening delimiter line
  * containing only <!-- slide --> (case-insensitive, optional surrounding
- * whitespace). Files without it use the classic mermaid-only path.
+ * whitespace). A delimiter shown inside a code fence or a ::: mermaid block is
+ * sample text, as in splitSlides, and does not count. Files without a real
+ * delimiter use the classic mermaid-only path.
  *
  * @param {string} rawText - Raw markdown file content
  * @returns {boolean} True if at least one slide delimiter is present
@@ -67,9 +102,20 @@ function hasSlideDelimiter(rawText) {
 		return false;
 	}
 
-	return rawText.split(/\r?\n/).some(function (line) {
-		return OPEN_SLIDE_DELIMITER.test(line);
-	});
+	let insideFence = false;
+	let insideColonMermaid = false;
+	for (const line of rawText.split(/\r?\n/)) {
+		if (/^```/.test(line)) {
+			insideFence = !insideFence;
+		} else if (!insideFence && /^:::\s*mermaid/.test(line)) {
+			insideColonMermaid = true;
+		} else if (insideColonMermaid && /^:::\s*$/.test(line)) {
+			insideColonMermaid = false;
+		} else if (!insideFence && !insideColonMermaid && OPEN_SLIDE_DELIMITER.test(line)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 /**

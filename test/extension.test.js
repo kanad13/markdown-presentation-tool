@@ -553,3 +553,40 @@ describe("getWebviewContent template safety", () => {
 		assert.ok(html.includes('import("https://cdn.jsdelivr.net/npm/mermaid@'));
 	});
 });
+
+describe("code-aware extraction", () => {
+	it("keeps the A:::class shorthand inside a ::: mermaid block", () => {
+		const input = "::: mermaid\ngraph TD\n  A:::hot --> B\n:::\n";
+		assert.deepEqual(extractMermaidBlocks(input), ["graph TD\n  A:::hot --> B"]);
+	});
+
+	it("closes a ::: mermaid block only at a ::: line of its own", () => {
+		const input = "::: mermaid\ngraph TD\n  A --> B\n  B:::hot --> C\n:::\n\n::: mermaid\ngraph LR\n  X --> Y\n:::\n";
+		const result = extractMermaidBlocks(input);
+		assert.equal(result.length, 2);
+		assert.match(result[0], /B:::hot --> C/);
+	});
+
+	it("does not extract a mermaid fence that appears inside other fenced code", () => {
+		const input = "```markdown\n::: mermaid\ngraph TD\n  A --> B\n:::\n```\n";
+		assert.deepEqual(extractMermaidBlocks(input), []);
+	});
+
+	it("does not extract ::: mermaid text from the middle of a line", () => {
+		assert.deepEqual(extractMermaidBlocks("Write ::: mermaid\nfoo\n:::\n"), []);
+	});
+
+	it("does not enter slide mode on a delimiter that sits inside a code fence", () => {
+		const input = "```markdown\n<!-- slide -->\n```\n\n```mermaid\ngraph TD\n  A --> B\n```\n";
+		assert.equal(hasSlideDelimiter(input), false);
+		assert.deepEqual(getSlides(input), ["```mermaid\ngraph TD\n  A --> B\n```"]);
+	});
+
+	it("does not enter slide mode on a delimiter that sits inside a ::: mermaid block", () => {
+		assert.equal(hasSlideDelimiter("::: mermaid\n<!-- slide -->\n:::\n"), false);
+	});
+
+	it("still detects a delimiter that follows a closed code fence", () => {
+		assert.equal(hasSlideDelimiter("```js\nx\n```\n<!-- slide -->\n"), true);
+	});
+});

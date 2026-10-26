@@ -15,6 +15,7 @@ This guide covers setup, daily checks, continuous integration, and the release p
 | `examples/02-slide-mode-basics.md` | Slide mode happy path: text and diagrams, both fence syntaxes            |
 | `examples/03-slide-mode-advanced.md` | Slide mode edge cases: preamble, gaps, empty pairs, a tall slide          |
 | `examples/04-demo-script.md`  | Walkthrough content for demos and manual testing                               |
+| `examples/showcase.md`        | Source of the README screenshots                                               |
 
 ## Prerequisites
 
@@ -60,6 +61,22 @@ code --uninstall-extension KunalPathak.markdown-presentation-tool
 ```
 
 The `.vsix` file is git-ignored. Do not commit it.
+
+### Readme images
+
+- **Link:**
+  - Link each image by an absolute `https://raw.githubusercontent.com/kanad13/markdown-presentation-tool/main/assets/<file>.png` URL.
+  - The package leaves `assets/readme-*.png` out, so a relative link breaks on the Marketplace and Open VSX pages. A `github.com/.../blob/...` link returns an HTML page, not the image.
+- **Format:**
+  - Use PNG, because the Marketplace rejects SVG. Name the files `assets/readme-*.png`.
+  - Give every image alt text of one full sentence that describes what it shows.
+- **Merge order:**
+  - Add the file on the same branch as the link. The image URL works for readers only after the branch merges to `main`.
+- **Source:**
+  - `examples/showcase.md` is the document behind the screenshots. Serve it with the [browser harness](testing.md#browser-harness-procedure) and capture each slide in a 1100 by 700 viewport, then crop. On macOS, `sips -c H W --cropOffset Y X` ignores a zero offset and crops from the centre, so use an offset of 1.
+  - Open every cropped image before you link it.
+- **Check:**
+  - The `readme images` suite in `test/docs.test.js` checks the URLs, the files, the format, the alt text, and a minimum of four images.
 
 ### Check rendering in a browser
 

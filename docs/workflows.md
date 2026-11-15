@@ -57,7 +57,7 @@ The goal is a repository whose dependencies, support floor, tests, and documents
   - `npm audit` cannot see Mermaid, because the webview loads it from the CDN at run time.
   - Check the version in `MERMAID_VERSION` against Mermaid's published advisories.
 - **Editor floor:**
-  - Apply the [editor and Node support policy](dependencies.md#editor-and-node-support-policy). Check forks before you raise the floor, and read [decisions.md](decisions.md) for any hold on the floor.
+  - Apply the [editor and Node support policy](dependencies.md#editor-and-node-support-policy). Check forks before you raise the floor.
 - **Registries and authentication:**
   - Confirm that the publishing steps in [development.md](development.md#release-process) still match the store's current rules.
 - **Verify:**

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.2] - 2026-11-15
+
+### Fixed
+
+- The editor floor is now VS Code 1.105.0 (was 1.109.0), so the extension installs on editors based on VS Code 1.105 to 1.108, such as Antigravity and Cursor. The extension code is unchanged.
+
 ## [2.2.1] - 2026-10-26
 
 ### Fixed

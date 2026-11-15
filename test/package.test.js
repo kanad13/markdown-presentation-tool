@@ -49,6 +49,15 @@ describe("manifest policy", () => {
 		assert.equal(manifest.devDependencies["@types/vscode"], floor);
 	});
 
+	it("keeps the editor floor at or below Cursor's base, 1.105.0", () => {
+		// Cursor is the lowest fork base the README advertises. A higher floor blocks installation there.
+		// Raise this ceiling only for a named API need or a fork rebase, in every sibling extension.
+		const floor = manifest.engines.vscode.replace(/^\^/, "").split(".").map(Number);
+		const ceiling = [1, 105, 0];
+		const cmp = floor.findIndex((n, i) => n !== ceiling[i]);
+		assert.ok(cmp === -1 || floor[cmp] < ceiling[cmp], "engines.vscode is above 1.105.0");
+	});
+
 	it("declares support for untrusted workspaces", () => {
 		// The extension runs no code from the opened folder and validates workspace settings,
 		// so it stays usable in Restricted Mode.

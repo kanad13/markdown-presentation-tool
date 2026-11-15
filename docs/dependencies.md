@@ -52,14 +52,13 @@ Two further rules bind how a version is written.
 
 - **Editor target:**
   - Test on the current stable release of the editor. Insiders builds are not a target.
-  - The engine floor is the newest editor release that is at least 12 months old.
+  - The engine floor is the lowest base version among the forks the README advertises. Cursor is the lowest today, at 1.105.x, so every sibling extension uses 1.105.0.
 - **Floor changes:**
-  - Move the engine floor and the exact `@types/vscode` pin together, at each quarterly review.
-  - A maintainer decision can hold the floor above this value. [decisions.md](decisions.md) records any such hold.
-  - `test/package.test.js` fails when the two disagree.
+  - Raise the floor only when the code needs a newer API, or when the lowest advertised fork rebases onto a newer base. Never raise it because of a date.
+  - Move the engine floor, the exact `@types/vscode` pin, and the test ceiling together, in every sibling extension. Name the API in [decisions.md](decisions.md).
+  - `test/package.test.js` fails when the two disagree or when the floor is above 1.105.0.
 - **Forks:**
-  - Before raising the floor, check the base editor version of every fork the README advertises. A floor above a fork's base blocks installation there.
-  - When a raised floor would exclude a named fork, present that trade-off to the maintainer.
+  - Before raising the floor, read each advertised fork's base version in its About dialog. A floor above a fork's base blocks installation there.
 - **Node:**
   - The `engines.node` floor is the lowest Node release that every tool in `devDependencies` accepts, on a line that still receives security fixes.
   - `@types/node` follows the major line of the Node that the support-floor editor bundles, so typings never describe APIs the extension host lacks.
@@ -85,7 +84,7 @@ Run this quarterly, and whenever an advisory lands. The steps run in order.
 1. Install from the lockfile with `npm ci`.
 2. Inventory every dependency in the three groups above.
 3. Look up current versions and publication dates in the registry (`npm view <package> time --json`) and apply the selection policy to each item.
-4. Move `engines.vscode` and `@types/vscode` together when the support-floor rule yields a newer release. Re-check advertised forks first.
+4. Check each advertised fork's base version. Move `engines.vscode`, `@types/vscode`, and the test ceiling together only when the code needs a newer API or the lowest fork has rebased.
 5. Apply in-range updates with `npm update --ignore-scripts`, then audit fixes with `npm audit fix --ignore-scripts`.
 6. Run `npm audit --omit=dev` (production only) and `npm audit` (full). Production findings block a release. Dev-tree findings follow the rules below.
 7. Hold any direct dependency whose newest release is under the age limit at the newest qualifying version. Install it by exact version, then confirm the lockfile.

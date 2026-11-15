@@ -20,7 +20,6 @@ Related guides: [architecture.md](architecture.md) for the design these decision
 
 | Idea                                    | Verdict            | Reopen when                                                     |
 | :-------------------------------------- | :----------------- | :-------------------------------------------------------------- |
-| Engine floor held above the policy value | Maintainer decision | The maintainer asks to follow the 12-month rule                |
 | Links in slide text                     | Defer              | A maintainer or user asks for clickable links                   |
 | Tables                                  | Scoped pursue      | Users report tables as the top gap                              |
 | Nested lists and task lists             | Defer              | A user deck needs a second list level                           |
@@ -34,17 +33,6 @@ Related guides: [architecture.md](architecture.md) for the design these decision
 | Image hosts in the Content Security Policy | Reject          | A privacy requirement rules out remote images                   |
 
 ## Entries
-
-### Engine floor held above the policy value
-
-- **What it is:**
-  - The support policy in [dependencies.md](dependencies.md) sets the editor floor to the newest release that is at least 12 months old. The manifest holds the floor at an older maintainer-chosen release that sits above that value.
-- **Why it stays:**
-  - The maintainer chose to keep the existing floor and not widen the supported audience in this release.
-- **What it costs:**
-  - Users on editor releases between the policy value and the floor cannot install the extension.
-- **Reopen when:**
-  - The maintainer asks to follow the 12-month rule, or a user on an older editor asks for support. Move `engines.vscode` and the `@types/vscode` pin together.
 
 ### Links in slide text
 
